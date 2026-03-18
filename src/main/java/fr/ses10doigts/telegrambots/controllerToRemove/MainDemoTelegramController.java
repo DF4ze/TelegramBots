@@ -10,58 +10,58 @@ import fr.ses10doigts.telegrambots.service.poller.handler.annot.TelegramControll
 
 import java.util.List;
 
-@TelegramController(bot="main-bot")
-public class DemoTelegramController {
+@TelegramController
+public class MainDemoTelegramController {
 
     @Command("/ping")
     public String ping(TelegramUpdateContext ctx) {
-        System.out.println("PING 2nd: " + ctx.getText());
+        System.out.println("PING main: " + ctx.getText());
         return "pong";
     }
 
     @Chat
     public String chat(TelegramUpdateContext ctx) {
-        System.out.println("CHAT : " + ctx.getText());
+        System.out.println("CHAT Main controller : " + ctx.getText());
         return ctx.getText();
     }
 
-    @Command(value = "/menu", description = "Afficher le menu")
+    @Command(value = "/test", description = "Trade?")
     public TelegramView menu(TelegramUpdateContext ctx) {
         return TelegramView.builder()
                 .text("Que veux-tu faire ?")
                 .buttons(List.of(
                         List.of(
-                                new TelegramButtonView("Launch", "launch"),
-                                new TelegramButtonView("Stop", "stop")
+                                new TelegramButtonView("Buy", "buy"),
+                                new TelegramButtonView("Sell", "sell")
                         )
                 ))
                 .build();
     }
 
-    @CallbackQuery("launch")
+    @CallbackQuery("buy")
     public TelegramView buy(TelegramUpdateContext ctx) {
         return TelegramView.builder()
                 .buttons(List.of(
                         List.of(
-                                new TelegramButtonView("Now", "now"),
-                                new TelegramButtonView("After", "after")
+                                new TelegramButtonView("Market", "market"),
+                                new TelegramButtonView("Limit", "limit")
                         )
                 ))
                 .build();
     }
 
-    @CallbackQuery("Stop")
+    @CallbackQuery("sell")
     public String sell(TelegramUpdateContext ctx) {
-        return "Stop lancée";
+        return "Vente lancée";
     }
 
-    @CallbackQuery("now")
+    @CallbackQuery("market")
     public String market(TelegramUpdateContext ctx) {
-        return "Launch now";
+        return "Achat Market";
     }
 
-    @CallbackQuery("after")
+    @CallbackQuery("limit")
     public String limit(TelegramUpdateContext ctx) {
-        return "Launch after";
+        return "Achat Limit";
     }
 }

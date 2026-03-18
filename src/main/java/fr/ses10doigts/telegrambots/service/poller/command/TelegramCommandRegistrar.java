@@ -36,7 +36,10 @@ public class TelegramCommandRegistrar implements SmartInitializingSingleton {
         }
 
         for (TelegramBotProperties bot : telegramBotRegistry.getAllBots()) {
-            registerCommandsForBot(bot, commands);
+            List<BotCommand> botCommands = registry.getCommandDefinitions(bot.getId()).stream()
+                    .map(this::toBotCommand)
+                    .toList();
+            registerCommandsForBot(bot, botCommands);
         }
     }
 

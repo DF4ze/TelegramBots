@@ -68,11 +68,10 @@ public class TelegramAutoConfiguration {
     public TelegramUpdateDispatcher telegramUpdateDispatcher(
             TelegramHandlerRegistry registry,
             TelegramSender telegramSender,
-            TelegramProperties properties,
             CurrentTelegramBotContext currentTelegramBotContext,
             TelegramBotRegistry telegramBotRegistry
     ) {
-        return new TelegramUpdateDispatcher(registry, telegramSender, properties, currentTelegramBotContext, telegramBotRegistry);
+        return new TelegramUpdateDispatcher(registry, telegramSender, currentTelegramBotContext, telegramBotRegistry);
     }
 
     @Bean

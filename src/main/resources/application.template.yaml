@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: TelegramBots
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    fr.ses10doigts.telegrambots: DEBUG
+
+telegram:
+  enabled: true
+  bots:
+    - id: main-bot
+      token: YourToken
+      polling-enabled: true
+      auto-register-commands: true
+      configure-menu-button: true
+      security:
+        allowed-user-ids:
+          - 123456789
+      retry:
+        enabled: true
+        max-attempts: 3
+        delaySeconds: 10
+
+    - id: secondary-bot
+      token: YourToken
+      polling-enabled: true
+      auto-register-commands: true
+      configure-menu-button: true
+      security:
+        allowed-user-ids:
+          - 123456789
