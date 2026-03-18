@@ -1,6 +1,6 @@
 package fr.ses10doigts.telegrambots.model;
 
-import fr.ses10doigts.telegrambots.service.poller.ParsedCommand;
+import fr.ses10doigts.telegrambots.service.poller.command.ParsedCommand;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
@@ -12,6 +12,8 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class TelegramUpdateContext {
+    private final String botId;
+
     private Update update;
     private Message message;
 
@@ -27,7 +29,7 @@ public class TelegramUpdateContext {
     private boolean callbackQuery;
     private String callbackData;
 
-    public static TelegramUpdateContext from(Update update) {
+    public static TelegramUpdateContext from(Update update, String botId) {
         if (update == null) {
             return null;
         }
@@ -90,6 +92,7 @@ public class TelegramUpdateContext {
         }
 
         return new TelegramUpdateContext(
+                botId,
                 update,
                 message,
                 chatId,

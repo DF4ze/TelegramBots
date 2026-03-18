@@ -29,7 +29,7 @@ public class DefaultTelegramSender implements TelegramSender {
 
     public DefaultTelegramSender(String botToken, TelegramRetryProperties retryProperties) {
         this.client = new OkHttpTelegramClient(botToken);
-        this.retryProperties = retryProperties;
+        this.retryProperties = retryProperties != null ? retryProperties : new TelegramRetryProperties();
     }
 
     @Override
@@ -143,7 +143,7 @@ public class DefaultTelegramSender implements TelegramSender {
                 sendMessage.setParseMode(parseMode);
             }
 
-            executeWithRetry("sendMessage", () -> client.execute(sendMessage));
+            Object unused = executeWithRetry("sendMessage", () -> client.execute(sendMessage));
         } catch (Exception e) {
             log.error("Telegram sendMessage error", e);
         }
@@ -177,7 +177,9 @@ public class DefaultTelegramSender implements TelegramSender {
         }
     }
 
+
     private <T> T executeWithRetry(String actionName, TelegramCall<T> call) throws Exception {
+
         if (!retryProperties.isEnabled()) {
             return call.execute();
         }

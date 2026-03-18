@@ -1,4 +1,4 @@
-package fr.ses10doigts.telegrambots.service.poller;
+package fr.ses10doigts.telegrambots.service.poller.command;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

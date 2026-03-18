@@ -1,9 +1,12 @@
 package fr.ses10doigts.telegrambots.service.poller;
 
+import fr.ses10doigts.telegrambots.configuration.TelegramBotProperties;
 import fr.ses10doigts.telegrambots.configuration.TelegramProperties;
 import fr.ses10doigts.telegrambots.model.TelegramUpdateContext;
 import fr.ses10doigts.telegrambots.model.TelegramHandlerMethod;
 import fr.ses10doigts.telegrambots.model.TelegramView;
+import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramBotContext;
+import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistry;
 import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistry;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSender;
 import lombok.RequiredArgsConstructor;
@@ -12,16 +15,16 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Set;
 
 @Slf4j
 @RequiredArgsConstructor
 public class TelegramUpdateDispatcher {
 
     private final TelegramHandlerRegistry registry;
-    private final TelegramSender telegramSender;
+    private final TelegramSender sender;
     private final TelegramProperties properties;
-
+    private final CurrentTelegramBotContext currentBotContext;
+    private final TelegramBotRegistry telegramBotRegistry;
 
 
     public void dispatch(Update update) {
@@ -34,7 +37,7 @@ public class TelegramUpdateDispatcher {
             return;
         }
 
-        TelegramUpdateContext context = TelegramUpdateContext.from(update);
+        TelegramUpdateContext context = TelegramUpdateContext.from(update, currentBotContext.getCurrentBotId());
         if( context == null )
             return;
 
@@ -63,9 +66,9 @@ public class TelegramUpdateDispatcher {
         }
 
         // Ack immédiat pour éviter le spinner Telegram
-        telegramSender.answerCallbackQuery(callbackQuery.getId());
+        sender.answerCallbackQuery(callbackQuery.getId());
 
-        TelegramUpdateContext context = TelegramUpdateContext.from(update);
+        TelegramUpdateContext context = TelegramUpdateContext.from(update, currentBotContext.getCurrentBotId());
 
         if( context == null ){
             log.warn("dispatchCallbackQuery : Unable to handle update");
@@ -87,13 +90,17 @@ public class TelegramUpdateDispatcher {
     }
 
     private boolean isNotAllowed(Long userId) {
-        Set<Long> allowed = properties.getAllowedUserIds();
-        return allowed != null && !allowed.isEmpty() && (userId == null || !allowed.contains(userId));
+        String botId = currentBotContext.getRequiredCurrentBotId();
+        TelegramBotProperties bot = telegramBotRegistry.getRequiredBot(botId);
+
+        return !bot.getSecurity().getAllowedUserIds().isEmpty()
+                && !bot.getSecurity().getAllowedUserIds().contains(userId);
     }
 
     private void handleUnauthorized(TelegramUpdateContext context) {
         if ("/start".equals(context.getCommand()) && context.getChatId() != null) {
-            telegramSender.sendMessage(
+
+            sender.sendMessage(
                     context.getChatId(),
                     "Access refused.\nYour Telegram id is : `" + context.getUserId() + "`\n" +
                             "Add it to : telegram.allowed-user-ids"
@@ -112,10 +119,10 @@ public class TelegramUpdateDispatcher {
                 case null -> {
                 }
                 case String response when !response.isBlank() ->
-                    telegramSender.sendMessage(context.getChatId(), response);
+                    sender.sendMessage(context.getChatId(), response);
 
                 case TelegramView view ->
-                    telegramSender.sendView(context.getChatId(), view);
+                    sender.sendView(context.getChatId(), view);
 
                 default ->
                     throw new IllegalStateException("Unsupported Telegram handler return type: " + result.getClass());
