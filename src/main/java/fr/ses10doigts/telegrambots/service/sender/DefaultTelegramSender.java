@@ -1,0 +1,173 @@
+package fr.ses10doigts.telegrambots.service.sender;
+
+import fr.ses10doigts.telegrambots.model.TelegramButtonView;
+import fr.ses10doigts.telegrambots.model.TelegramView;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+@Slf4j
+public class DefaultTelegramSender implements TelegramSender {
+
+    @Getter
+    private final TelegramClient client;
+
+    public DefaultTelegramSender(String botToken) {
+        this.client = new OkHttpTelegramClient(botToken);
+    }
+
+    @Override
+    public void sendMessage(Long chatId, String text) {
+        sendText(chatId, text, null);
+    }
+
+    @Override
+    public void sendMarkdownMessage(Long chatId, String text) {
+        sendText(chatId, TelegramMarkdownUtils.escapeMarkdownV2(text), "MarkdownV2");
+    }
+
+    @Override
+    public void sendMarkdownMessagePreservingLinks(Long chatId, String text) {
+        sendText(chatId, TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(text), "MarkdownV2");
+    }
+
+    @Override
+    public void sendView(Long chatId, TelegramView view) {
+        if (view == null) {
+            log.warn("TelegramView is null, nothing sent for chatId={}", chatId);
+            return;
+        }
+
+        String text = view.getText();
+        if (text == null || text.isBlank()) {
+            log.warn("TelegramView text is blank, nothing sent for chatId={}", chatId);
+            return;
+        }
+
+        if (view.getButtons() == null || view.getButtons().isEmpty()) {
+            sendMessage(chatId, text);
+            return;
+        }
+
+        try {
+            SendMessage sendMessage = new SendMessage(chatId.toString(), text);
+            sendMessage.setDisableWebPagePreview(true);
+            sendMessage.setReplyMarkup(buildInlineKeyboard(view.getButtons()));
+
+            client.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error("Telegram sendView error", e);
+        }
+    }
+
+    @Override
+    public void answerCallbackQuery(String callbackQueryId) {
+        try {
+            AnswerCallbackQuery answerCallbackQuery = AnswerCallbackQuery.builder()
+                    .callbackQueryId(callbackQueryId)
+                    .build();
+
+            client.execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            log.error("Telegram answerCallbackQuery error", e);
+        }
+    }
+
+    private InlineKeyboardMarkup buildInlineKeyboard(List<List<TelegramButtonView>> buttonRows) {
+        List<InlineKeyboardRow> keyboard = new ArrayList<>();
+
+        for (List<TelegramButtonView> row : buttonRows) {
+            if (row == null || row.isEmpty()) {
+                continue;
+            }
+
+            InlineKeyboardRow keyboardRow = new InlineKeyboardRow();
+
+            for (TelegramButtonView buttonView : row) {
+                if (buttonView == null) {
+                    continue;
+                }
+
+                String text = buttonView.getText();
+                String callbackData = buttonView.getCallbackData();
+
+                if (text == null || text.isBlank() || callbackData == null || callbackData.isBlank()) {
+                    log.warn("Skipping invalid Telegram button: text='{}', callbackData='{}'", text, callbackData);
+                    continue;
+                }
+
+                InlineKeyboardButton button = InlineKeyboardButton.builder()
+                        .text(text)
+                        .callbackData(callbackData)
+                        .build();
+
+                keyboardRow.add(button);
+            }
+
+            if (!keyboardRow.isEmpty()) {
+                keyboard.add(keyboardRow);
+            }
+        }
+
+        return InlineKeyboardMarkup.builder()
+                .keyboard(keyboard)
+                .build();
+    }
+
+    private void sendText(Long chatId, String text, String parseMode) {
+        try {
+            SendMessage sendMessage = new SendMessage(chatId.toString(), text);
+            sendMessage.setDisableWebPagePreview(true);
+
+            if (parseMode != null) {
+                sendMessage.setParseMode(parseMode);
+            }
+
+            client.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error("Telegram sendMessage error", e);
+        }
+    }
+
+    @Override
+    public void sendPhoto(Long chatId, String photoPath, String caption) {
+        try {
+            SendPhoto sendPhoto = new SendPhoto(
+                    chatId.toString(),
+                    new InputFile(new File(photoPath))
+            );
+            sendPhoto.setCaption(caption);
+            client.execute(sendPhoto);
+        } catch (TelegramApiException e) {
+            log.error("Telegram sendPhoto error", e);
+        }
+    }
+
+    @Override
+    public void sendDocument(Long chatId, String documentPath, String caption) {
+        try {
+            SendDocument sendDocument = new SendDocument(
+                    chatId.toString(),
+                    new InputFile(new File(documentPath))
+            );
+            sendDocument.setCaption(caption);
+            client.execute(sendDocument);
+        } catch (TelegramApiException e) {
+            log.error("Telegram sendDocument error", e);
+        }
+    }
+}
