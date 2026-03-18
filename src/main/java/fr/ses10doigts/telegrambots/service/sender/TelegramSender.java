@@ -19,5 +19,4 @@ public interface TelegramSender {
 
     void answerCallbackQuery(String callbackQueryId);
 
-    TelegramClient getClient();
 }

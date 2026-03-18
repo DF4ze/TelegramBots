@@ -6,7 +6,7 @@ import fr.ses10doigts.telegrambots.service.poller.handler.annot.Command;
 import fr.ses10doigts.telegrambots.service.poller.handler.annot.TelegramController;
 
 @TelegramController
-class DemoTelegramController {
+public class DemoTelegramControllerTest {
 
     @Command(value = "/ping", description = "Ping command")
     public String ping(TelegramUpdateContext ctx) {

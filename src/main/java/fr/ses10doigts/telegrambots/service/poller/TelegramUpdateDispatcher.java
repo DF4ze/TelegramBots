@@ -8,15 +8,10 @@ import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistr
 import fr.ses10doigts.telegrambots.service.sender.TelegramSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.message.Message;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 import java.util.Set;
 
 @Slf4j
@@ -26,13 +21,12 @@ public class TelegramUpdateDispatcher {
     private final TelegramHandlerRegistry registry;
     private final TelegramSender telegramSender;
     private final TelegramProperties properties;
-    private final TelegramClient telegramClient;
 
 
 
     public void dispatch(Update update) {
         if (update.hasCallbackQuery()) {
-            handleCallbackQuery(update);
+            dispatchCallbackQuery(update);
             return;
         }
 
@@ -64,75 +58,32 @@ public class TelegramUpdateDispatcher {
 
     private void dispatchCallbackQuery(Update update) {
         CallbackQuery callbackQuery = update.getCallbackQuery();
-        String callbackData = callbackQuery.getData();
-
-        TelegramHandlerMethod handlerMethod = registry.getCallbackHandlers().get(callbackData);
-
-        if (handlerMethod == null) {
-            telegramSender.answerCallbackQuery(callbackQuery.getId());
-            log.warn("No Telegram callback handler found for data={}", callbackData);
-            return;
-        }
-
-        TelegramUpdateContext context = TelegramUpdateContext.from(update);
-
-        try {
-            invoke(handlerMethod, context);
-        } finally {
-            telegramSender.answerCallbackQuery(callbackQuery.getId());
-        }
-    }
-
-    private void handleCallbackQuery(Update update) {
-        CallbackQuery callbackQuery = update.getCallbackQuery();
         if (callbackQuery == null) {
             return;
         }
 
-        answerCallback(callbackQuery.getId());
+        // Ack immédiat pour éviter le spinner Telegram
+        telegramSender.answerCallbackQuery(callbackQuery.getId());
 
-        Message message = null;
+        TelegramUpdateContext context = TelegramUpdateContext.from(update);
 
-        if (callbackQuery.getMessage() instanceof Message m) {
-            message = m;
+        if( context == null ){
+            log.warn("dispatchCallbackQuery : Unable to handle update");
+            return;
         }
 
-        Long chatId = message != null && message.getChat() != null ? message.getChatId() : null;
-        Long userId = callbackQuery.getFrom() != null ? callbackQuery.getFrom().getId() : null;
-        String callbackData = callbackQuery.getData();
-
-        TelegramUpdateContext context = new TelegramUpdateContext(
-                update,
-                message,
-                chatId,
-                userId,
-                message != null ? message.getText() : null,
-                null,
-                null,
-                List.of(),
-                true,
-                callbackData
-        );
-
-        if (isNotAllowed(userId)) {
+        if (isNotAllowed(context.getUserId())) {
             handleUnauthorized(context);
             return;
         }
 
-        TelegramHandlerMethod handler = registry.getCallbackHandlers().get(callbackData);
-        if (handler != null) {
-            invoke(handler, context);
+        TelegramHandlerMethod handler = registry.getCallbackHandlers().get( context.getCallbackData() );
+        if (handler == null) {
+            log.warn("No Telegram callback handler found for data={}", context.getCallbackData());
+            return;
         }
-    }
 
-    private void answerCallback(String callbackQueryId) {
-        try {
-            telegramClient.execute(AnswerCallbackQuery.builder()
-                    .callbackQueryId(callbackQueryId)
-                    .build());
-        } catch (TelegramApiException e) {
-            log.warn("Unable to answer Telegram callback query", e);
-        }
+        invoke(handler, context);
     }
 
     private boolean isNotAllowed(Long userId) {

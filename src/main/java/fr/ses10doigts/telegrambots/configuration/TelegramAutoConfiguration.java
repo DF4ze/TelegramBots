@@ -15,14 +15,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(TelegramProperties.class)
+@EnableConfigurationProperties({TelegramProperties.class, TelegramRetryProperties.class})
+
 public class TelegramAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "telegram", name = "bot-token")
-    public TelegramSender telegramSender(TelegramProperties properties) {
-        return new DefaultTelegramSender(properties.getBotToken());
+    public TelegramSender telegramSender(TelegramProperties properties, TelegramRetryProperties retryProperties) {
+        return new DefaultTelegramSender(properties.getBotToken(), retryProperties);
     }
 
     @Bean
@@ -36,10 +37,9 @@ public class TelegramAutoConfiguration {
     public TelegramUpdateDispatcher telegramUpdateDispatcher(
             TelegramHandlerRegistry registry,
             TelegramSender telegramSender,
-            TelegramProperties properties,
-            TelegramSender sender) {
+            TelegramProperties properties) {
 
-        return new TelegramUpdateDispatcher(registry, telegramSender, properties, sender.getClient());
+        return new TelegramUpdateDispatcher(registry, telegramSender, properties);
     }
 
     @Bean

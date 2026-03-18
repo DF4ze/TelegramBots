@@ -1,8 +1,8 @@
 package fr.ses10doigts.telegrambots.service.sender;
 
+import fr.ses10doigts.telegrambots.configuration.TelegramRetryProperties;
 import fr.ses10doigts.telegrambots.model.TelegramButtonView;
 import fr.ses10doigts.telegrambots.model.TelegramView;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
@@ -23,11 +23,13 @@ import java.util.List;
 @Slf4j
 public class DefaultTelegramSender implements TelegramSender {
 
-    @Getter
-    private final TelegramClient client;
 
-    public DefaultTelegramSender(String botToken) {
+    private final TelegramClient client;
+    private final TelegramRetryProperties retryProperties;
+
+    public DefaultTelegramSender(String botToken, TelegramRetryProperties retryProperties) {
         this.client = new OkHttpTelegramClient(botToken);
+        this.retryProperties = retryProperties;
     }
 
     @Override
@@ -53,23 +55,27 @@ public class DefaultTelegramSender implements TelegramSender {
         }
 
         String text = view.getText();
-        if (text == null || text.isBlank()) {
-            log.warn("TelegramView text is blank, nothing sent for chatId={}", chatId);
+        boolean hasButtons = view.getButtons() != null && !view.getButtons().isEmpty();
+
+        if (!hasButtons && (text == null || text.isBlank())) {
+            log.warn("TelegramView text is blank and no buttons are present, nothing sent for chatId={}", chatId);
             return;
         }
 
-        if (view.getButtons() == null || view.getButtons().isEmpty()) {
+        if (!hasButtons) {
             sendMessage(chatId, text);
             return;
         }
 
         try {
-            SendMessage sendMessage = new SendMessage(chatId.toString(), text);
+            String effectiveText = (text == null || text.isBlank()) ? "Question :" : text;
+
+            SendMessage sendMessage = new SendMessage(chatId.toString(), effectiveText);
             sendMessage.setDisableWebPagePreview(true);
             sendMessage.setReplyMarkup(buildInlineKeyboard(view.getButtons()));
 
-            client.execute(sendMessage);
-        } catch (TelegramApiException e) {
+            executeWithRetry("sendView", () -> client.execute(sendMessage));
+        } catch (Exception e) {
             log.error("Telegram sendView error", e);
         }
     }
@@ -137,8 +143,8 @@ public class DefaultTelegramSender implements TelegramSender {
                 sendMessage.setParseMode(parseMode);
             }
 
-            client.execute(sendMessage);
-        } catch (TelegramApiException e) {
+            executeWithRetry("sendMessage", () -> client.execute(sendMessage));
+        } catch (Exception e) {
             log.error("Telegram sendMessage error", e);
         }
     }
@@ -151,8 +157,8 @@ public class DefaultTelegramSender implements TelegramSender {
                     new InputFile(new File(photoPath))
             );
             sendPhoto.setCaption(caption);
-            client.execute(sendPhoto);
-        } catch (TelegramApiException e) {
+            executeWithRetry("sendPhoto", () -> client.execute(sendPhoto));
+        } catch (Exception e) {
             log.error("Telegram sendPhoto error", e);
         }
     }
@@ -165,9 +171,69 @@ public class DefaultTelegramSender implements TelegramSender {
                     new InputFile(new File(documentPath))
             );
             sendDocument.setCaption(caption);
-            client.execute(sendDocument);
-        } catch (TelegramApiException e) {
+            executeWithRetry("sendDocument", () -> client.execute(sendDocument));
+        } catch (Exception e) {
             log.error("Telegram sendDocument error", e);
         }
     }
+
+    private <T> T executeWithRetry(String actionName, TelegramCall<T> call) throws Exception {
+        if (!retryProperties.isEnabled()) {
+            return call.execute();
+        }
+
+        int maxAttempts = Math.max(1, retryProperties.getMaxAttempts());
+        long delayMillis = Math.max(0, retryProperties.getDelaySeconds()) * 1000L;
+
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return call.execute();
+            } catch (Exception e) {
+                lastException = e;
+
+                if (!isRetryable(e)) {
+                    throw e;
+                }
+
+                log.warn("Telegram {} failed on attempt {}/{}", actionName, attempt, maxAttempts, e);
+
+                if (attempt < maxAttempts && delayMillis > 0) {
+                    try {
+                        Thread.sleep(delayMillis);
+                    } catch (InterruptedException interruptedException) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Telegram retry interrupted", interruptedException);
+                    }
+                }
+            }
+        }
+
+        throw lastException;
+    }
+
+    private boolean isRetryable(Exception exception) {
+        if (!(exception instanceof TelegramApiException telegramApiException)) {
+            return true;
+        }
+
+        String message = telegramApiException.getMessage();
+        if (message == null) {
+            return true;
+        }
+
+        String lowerMessage = message.toLowerCase();
+
+        if (lowerMessage.contains("400 bad request")) {
+            return false;
+        }
+
+        if (lowerMessage.contains("403 forbidden")) {
+            return false;
+        }
+
+        return !lowerMessage.contains("404 not found");
+    }
+
 }

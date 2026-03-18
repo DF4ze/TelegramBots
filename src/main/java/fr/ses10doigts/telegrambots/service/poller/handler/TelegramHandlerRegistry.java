@@ -132,7 +132,7 @@ public class TelegramHandlerRegistry {
             throw new IllegalStateException(
                     "Invalid signature for " + annotationName + " on method "
                             + method.getDeclaringClass().getName() + "#" + method.getName()
-                            + ". Expected signature: (TelegramUpdateContext)"
+                            + ". Expected methode signature to be: "+method.getName()+"(TelegramUpdateContext context)"
             );
         }
     }
