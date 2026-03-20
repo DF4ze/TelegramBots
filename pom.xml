@@ -10,8 +10,8 @@
     </parent>
 
     <groupId>fr.ses10doigts</groupId>
-    <artifactId>TelegramBots</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>telegram-bots-mvc</artifactId>
+    <version>1.1.0</version>
     <name>TelegramBots</name>
     <description>TelegramBots</description>
 
@@ -61,10 +61,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
+
         </plugins>
     </build>
 
