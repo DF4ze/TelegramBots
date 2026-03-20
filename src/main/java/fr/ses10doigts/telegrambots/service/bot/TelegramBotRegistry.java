@@ -39,14 +39,6 @@ public class TelegramBotRegistry {
         return bot;
     }
 
-    public TelegramBotProperties getBot(String botId) {
-        return botsById.get(botId);
-    }
-
-    public boolean hasBot(String botId) {
-        return botsById.containsKey(botId);
-    }
-
     public Collection<TelegramBotProperties> getAllBots() {
         return botsById.values();
     }
