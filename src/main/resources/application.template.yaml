@@ -10,6 +10,7 @@ logging:
 
 telegram:
   enabled: true
+  default-bot-id: main-bot
   bots:
     - id: main-bot
       token: YourToken

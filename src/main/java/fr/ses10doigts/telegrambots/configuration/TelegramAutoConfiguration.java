@@ -1,6 +1,7 @@
 package fr.ses10doigts.telegrambots.configuration;
 
 
+import fr.ses10doigts.telegrambots.controller.TelegramBuiltinController;
 import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramBotContext;
 import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistry;
 import fr.ses10doigts.telegrambots.service.bot.TelegramStartupValidator;
@@ -11,17 +12,20 @@ import fr.ses10doigts.telegrambots.service.poller.command.TelegramCommandRegistr
 import fr.ses10doigts.telegrambots.service.sender.ContextAwareTelegramSender;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSender;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSenderRegistry;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Configuration
+@Slf4j
+@AutoConfiguration
 @EnableConfigurationProperties(TelegramProperties.class)
 public class TelegramAutoConfiguration {
 
@@ -44,8 +48,41 @@ public class TelegramAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
-    public TelegramSenderRegistry telegramSenderRegistry(TelegramBotRegistry botRegistry) {
-        return new TelegramSenderRegistry(botRegistry);
+    public TelegramSenderRegistry telegramSenderRegistry(
+            TelegramProperties properties,
+            TelegramBotRegistry botRegistry
+    ) {
+        String defaultBotId = resolveDefaultBotId(properties);
+
+        log.info("Default bot id set to: {}", defaultBotId);
+
+        return new TelegramSenderRegistry(botRegistry, defaultBotId);
+    }
+
+    private String resolveDefaultBotId(TelegramProperties properties) {
+        List<TelegramBotProperties> bots = properties.getBots();
+
+        if (bots == null || bots.isEmpty()) {
+            throw new IllegalStateException("No Telegram bots configured");
+        }
+
+        String configuredDefaultBotId = properties.getDefaultBotId();
+
+        if (configuredDefaultBotId == null || configuredDefaultBotId.isBlank()) {
+            return bots.getFirst().getId();
+        }
+
+        boolean exists = bots.stream()
+                .map(TelegramBotProperties::getId)
+                .anyMatch(configuredDefaultBotId::equals);
+
+        if (!exists) {
+            throw new IllegalStateException(
+                    "telegram.default-bot-id refers to unknown bot id: " + configuredDefaultBotId
+            );
+        }
+
+        return configuredDefaultBotId;
     }
 
     @Bean
@@ -104,5 +141,11 @@ public class TelegramAutoConfiguration {
             TelegramBotRegistry botRegistry
     ) {
         return new TelegramCommandRegistrar(registry, botRegistry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public TelegramBuiltinController telegramBuiltinController() {
+        return new TelegramBuiltinController();
     }
 }

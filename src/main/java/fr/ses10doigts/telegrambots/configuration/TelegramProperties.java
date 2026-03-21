@@ -11,6 +11,7 @@ import java.util.List;
 public class TelegramProperties {
 
     private boolean enabled = false;
+    private String defaultBotId;
 
     private List<TelegramBotProperties> bots = new ArrayList<>();
 }

@@ -56,7 +56,7 @@ public class TelegramCommandRegistrar implements SmartInitializingSingleton {
                     .commands(commands)
                     .build());
 
-            log.info("Telegram commands registered for bot '{}' : {}", bot.getId(), commands.size());
+            log.info("Telegram menu commands registered for bot '{}' : {}", bot.getId(), commands.size());
 
             if (bot.isConfigureMenuButton()) {
                 telegramClient.execute(SetChatMenuButton.builder()
