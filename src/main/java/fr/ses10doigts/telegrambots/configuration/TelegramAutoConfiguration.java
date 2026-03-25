@@ -35,7 +35,7 @@ public class TelegramAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
+    //@ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
     public CurrentTelegramBotContext currentTelegramBotContext() {
         return new CurrentTelegramBotContext();
     }
