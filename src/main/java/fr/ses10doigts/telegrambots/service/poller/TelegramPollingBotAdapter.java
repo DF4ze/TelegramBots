@@ -19,6 +19,10 @@ public class TelegramPollingBotAdapter implements SpringLongPollingBot, LongPoll
     private final CurrentTelegramBotContext botContext;
 
 
+    public String getBotId() {
+        return botId;
+    }
+
     @Override
     public String getBotToken() {
         return botToken;

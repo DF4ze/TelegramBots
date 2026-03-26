@@ -202,8 +202,10 @@ public class DefaultTelegramSender implements TelegramSender {
                 log.warn("Telegram {} failed on attempt {}/{}", actionName, attempt, maxAttempts, e);
 
                 if (attempt < maxAttempts && delayMillis > 0) {
+                    long currentDelay = delayMillis * attempt; // Délai qui s'allonge
+                    log.info("Waiting {}ms before next attempt for {} (attempt {})", currentDelay, actionName, attempt);
                     try {
-                        Thread.sleep(delayMillis);
+                        Thread.sleep(currentDelay);
                     } catch (InterruptedException interruptedException) {
                         Thread.currentThread().interrupt();
                         throw new IllegalStateException("Telegram retry interrupted", interruptedException);

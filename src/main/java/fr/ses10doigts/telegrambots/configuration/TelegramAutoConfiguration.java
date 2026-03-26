@@ -3,6 +3,7 @@ package fr.ses10doigts.telegrambots.configuration;
 
 import fr.ses10doigts.telegrambots.controller.TelegramBuiltinController;
 import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramBotContext;
+import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistrationManager;
 import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistry;
 import fr.ses10doigts.telegrambots.service.bot.TelegramStartupValidator;
 import fr.ses10doigts.telegrambots.service.poller.TelegramPollingBotAdapter;
@@ -113,12 +114,12 @@ public class TelegramAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
-    public List<SpringLongPollingBot> telegramPollingBots(
+    public List<TelegramPollingBotAdapter> telegramPollingBots(
             TelegramBotRegistry botRegistry,
             TelegramUpdateDispatcher dispatcher,
             CurrentTelegramBotContext currentTelegramBotContext
     ) {
-        List<SpringLongPollingBot> bots = new ArrayList<>();
+        List<TelegramPollingBotAdapter> bots = new ArrayList<>();
 
         for (TelegramBotProperties bot : botRegistry.getAllBots()) {
             if (bot.isPollingEnabled()) {
@@ -141,6 +142,16 @@ public class TelegramAutoConfiguration {
             TelegramBotRegistry botRegistry
     ) {
         return new TelegramCommandRegistrar(registry, botRegistry);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
+    public TelegramBotRegistrationManager telegramBotRegistrationManager(
+            TelegramProperties properties,
+            TelegramBotRegistry botRegistry,
+            List<TelegramPollingBotAdapter> pollingBots
+    ) {
+        return new TelegramBotRegistrationManager(properties, botRegistry, pollingBots);
     }
 
     @Bean
