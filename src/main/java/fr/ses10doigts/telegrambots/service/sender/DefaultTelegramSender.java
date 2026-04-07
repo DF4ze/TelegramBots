@@ -2,6 +2,7 @@ package fr.ses10doigts.telegrambots.service.sender;
 
 import fr.ses10doigts.telegrambots.configuration.TelegramRetryProperties;
 import fr.ses10doigts.telegrambots.model.TelegramButtonView;
+import fr.ses10doigts.telegrambots.model.TelegramMessageFormat;
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
@@ -55,6 +56,7 @@ public class DefaultTelegramSender implements TelegramSender {
         }
 
         String text = view.getText();
+        TelegramMessageFormat format = view.getFormat() != null ? view.getFormat() : TelegramMessageFormat.PLAIN;
         boolean hasButtons = view.getButtons() != null && !view.getButtons().isEmpty();
 
         if (!hasButtons && (text == null || text.isBlank())) {
@@ -63,16 +65,38 @@ public class DefaultTelegramSender implements TelegramSender {
         }
 
         if (!hasButtons) {
-            sendMessage(chatId, text);
+            switch (format) {
+                case MARKDOWN -> sendMarkdownMessage(chatId, text);
+                case MARKDOWN_PRESERVE_LINKS -> sendMarkdownMessagePreservingLinks(chatId, text);
+                default -> sendMessage(chatId, text);
+            }
             return;
         }
 
         try {
             String effectiveText = (text == null || text.isBlank()) ? "Question :" : text;
+            String messageText = effectiveText;
+            String parseMode = null;
 
-            SendMessage sendMessage = new SendMessage(chatId.toString(), effectiveText);
+            switch (format) {
+                case MARKDOWN -> {
+                    messageText = TelegramMarkdownUtils.escapeMarkdownV2(effectiveText);
+                    parseMode = "MarkdownV2";
+                }
+                case MARKDOWN_PRESERVE_LINKS -> {
+                    messageText = TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(effectiveText);
+                    parseMode = "MarkdownV2";
+                }
+                default -> {
+                }
+            }
+
+            SendMessage sendMessage = new SendMessage(chatId.toString(), messageText);
             sendMessage.setDisableWebPagePreview(true);
             sendMessage.setReplyMarkup(buildInlineKeyboard(view.getButtons()));
+            if (parseMode != null) {
+                sendMessage.setParseMode(parseMode);
+            }
 
             executeWithRetry("sendView", () -> client.execute(sendMessage));
         } catch (Exception e) {

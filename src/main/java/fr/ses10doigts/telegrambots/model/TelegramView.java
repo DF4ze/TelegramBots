@@ -11,4 +11,6 @@ public class TelegramView {
     private String text;
     private List<List<TelegramButtonView>> buttons;
     private boolean removeKeyboardOnCallback;
+    @Builder.Default
+    private TelegramMessageFormat format = TelegramMessageFormat.PLAIN;
 }
