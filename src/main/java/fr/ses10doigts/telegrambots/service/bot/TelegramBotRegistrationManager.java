@@ -9,10 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
-import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
-import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -23,10 +22,15 @@ public class TelegramBotRegistrationManager implements ApplicationListener<Conte
     private final List<TelegramPollingBotAdapter> pollingBots;
     
     private TelegramBotsLongPollingApplication botsApplication;
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (!properties.isEnabled() || pollingBots.isEmpty()) {
+            return;
+        }
+        if (!initialized.compareAndSet(false, true)) {
+            log.debug("Telegram bot registration already initialized, skipping duplicate context refresh event");
             return;
         }
 

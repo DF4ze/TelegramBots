@@ -5,13 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
-import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 @Slf4j
 @RequiredArgsConstructor
-public class TelegramPollingBotAdapter implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
+public class TelegramPollingBotAdapter implements LongPollingSingleThreadUpdateConsumer {
 
     private final String botId;
     private final String botToken;
@@ -23,12 +22,10 @@ public class TelegramPollingBotAdapter implements SpringLongPollingBot, LongPoll
         return botId;
     }
 
-    @Override
     public String getBotToken() {
         return botToken;
     }
 
-    @Override
     public LongPollingUpdateConsumer getUpdatesConsumer() {
         return this;
     }

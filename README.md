@@ -87,7 +87,7 @@ Autrement dit : ce README documente fidèlement ce que le code expose **ou laiss
 - **Java 21**
 - **Spring Boot 4.0.3**
 - dépendances Telegram basées sur :
-    - `telegrambots-springboot-longpolling-starter`
+    - `telegrambots-longpolling`
     - `telegrambots-client`
 
 ## Installation
@@ -647,9 +647,9 @@ Le README actuellement en ligne ne reflète plus correctement :
 - le contexte courant par bot ;
 - l'architecture des registries.
 
-### 3. Classe de démonstration applicative
+### 3. Point d'entrée applicatif
 
-La présence d'un `CommandLineRunner` dans `TelegramApplication` avec envoi direct de message ressemble à du code de test/démo, pas à un comportement à conserver dans une version distribuée.
+Le module publié ne doit pas exposer de point d'entrée applicatif de démonstration. Le démarrage du polling est désormais entièrement géré par l'auto-configuration et `TelegramBotRegistrationManager`.
 
 ---
 

@@ -26,7 +26,7 @@ telegram:
         delaySeconds: 10
 
     - id: secondary-bot
-      token: YourToken
+      token: YourSecondToken
       polling-enabled: true
       auto-register-commands: true
       configure-menu-button: true

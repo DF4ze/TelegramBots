@@ -11,7 +11,7 @@
 
     <groupId>fr.ses10doigts</groupId>
     <artifactId>telegram-bots-mvc</artifactId>
-    <version>1.4.2</version>
+    <version>1.4.3</version>
     <name>TelegramBots</name>
     <description>TelegramBots</description>
 
@@ -28,7 +28,7 @@
         <!-- Telegram -->
         <dependency>
             <groupId>org.telegram</groupId>
-            <artifactId>telegrambots-springboot-longpolling-starter</artifactId>
+            <artifactId>telegrambots-longpolling</artifactId>
             <version>9.4.0</version>
         </dependency>
 
