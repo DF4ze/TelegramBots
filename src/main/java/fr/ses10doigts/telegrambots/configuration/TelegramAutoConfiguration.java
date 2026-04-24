@@ -154,6 +154,14 @@ public class TelegramAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
+    public TelegramConflict409LogConfigurer telegramConflict409LogConfigurer(TelegramProperties properties) {
+        return new TelegramConflict409LogConfigurer(
+                properties.getPollingLogging().getConflict409LogMode()
+        );
+    }
+
+    @Bean
     @ConditionalOnMissingBean
     public TelegramBuiltinController telegramBuiltinController() {
         return new TelegramBuiltinController();

@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "telegram.polling-logging.conflict-409-log-mode",
+      "type": "fr.ses10doigts.telegrambots.configuration.TelegramPollingLoggingProperties$Conflict409LogMode",
+      "description": "Controls how Telegram BotSession 409 conflict polling errors are logged.",
+      "defaultValue": "ERROR"
+    }
+  ],
+  "hints": [
+    {
+      "name": "telegram.polling-logging.conflict-409-log-mode",
+      "values": [
+        {
+          "value": "ERROR",
+          "description": "Keep the original library ERROR log."
+        },
+        {
+          "value": "WARN",
+          "description": "Demote the 409 conflict log to WARN."
+        },
+        {
+          "value": "OFF",
+          "description": "Suppress this specific 409 conflict log line."
+        }
+      ]
+    }
+  ]
+}

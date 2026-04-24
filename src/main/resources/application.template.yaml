@@ -11,6 +11,11 @@ logging:
 telegram:
   enabled: true
   default-bot-id: main-bot
+  polling-logging:
+    # ERROR (default): keep telegram library ERROR log
+    # WARN: demote repeated 409 conflict log to WARN
+    # OFF: hide this specific 409 conflict log line
+    conflict-409-log-mode: WARN
   bots:
     - id: main-bot
       token: YourToken

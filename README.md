@@ -1,16 +1,13 @@
 # TelegramBots
 
-Module Spring Boot léger pour créer des bots Telegram avec un style de développement proche de Spring MVC.
-
-> **Note**
-> Ce README a été réécrit à partir du dépôt public `DF4ze/TelegramBots` tel qu'il est visible sur GitHub au 18 mars 2026.
-> Il reformate la documentation existante et complète les fonctionnalités présentes dans le code mais peu ou pas documentées.
+TelegramBots est un module Spring Boot qui simplifie la création de bots Telegram en Java avec une approche inspirée de Spring MVC.
+Il permet de déclarer des contrôleurs, router des commandes via annotations et gérer plusieurs bots avec une configuration centralisée.
+L’objectif : rendre le développement de bots Telegram clair, structuré et rapide à mettre en place.
 
 ## Sommaire
 
 - [Vue d'ensemble](#vue-densemble)
 - [Fonctionnalités](#fonctionnalités)
-- [État actuel du projet](#état-actuel-du-projet)
 - [Pré-requis](#pré-requis)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -74,13 +71,6 @@ L'objectif est de permettre d'écrire des bots Telegram en Java avec une approch
 - validation précoce des erreurs ;
 - centralisation des comportements Telegram récurrents.
 
-## État actuel du projet
-
-Le dépôt visible sur GitHub montre un projet en cours d'évolution.
-
-La configuration et plusieurs services indiquent clairement une orientation **multi-bot**, mais certaines classes publiques visibles dans le dépôt ne sont pas totalement alignées entre elles. Par exemple, la registry des handlers semble prévoir un rattachement des contrôleurs à un bot donné, alors que l'annotation `@TelegramController` visible dans le dépôt ne déclare pas encore cet attribut.
-
-Autrement dit : ce README documente fidèlement ce que le code expose **ou laisse clairement entendre**, mais certains points méritent encore une vérification avant publication Maven.
 
 ## Pré-requis
 
@@ -92,7 +82,6 @@ Autrement dit : ce README documente fidèlement ce que le code expose **ou laiss
 
 ## Installation
 
-Le `README` actuel du dépôt contient encore un exemple générique avec `com.yourorg`, mais le `pom.xml` visible expose actuellement :
 
 ```xml
 <groupId>fr.ses10doigts</groupId>
@@ -619,57 +608,21 @@ Le code actuel valide plusieurs points dès l'initialisation :
 - les doublons de handlers `@CallbackQuery` provoquent une erreur ;
 - un seul handler `@Chat` est autorisé par scope de bot.
 
-## Limites et points à vérifier
-
-### 1. Incohérences visibles dans le dépôt
-
-Le dépôt public présente au moins un point de divergence apparent :
-
-- `TelegramHandlerRegistry` semble gérer des handlers globaux et spécifiques à un bot ;
-- l'annotation `@TelegramController` visible dans le dépôt ne porte pourtant pas d'attribut `bot`.
-
-Avant publication officielle, il serait utile d'aligner complètement :
-
-- l'annotation publique ;
-- les exemples du README ;
-- les tests ;
-- la configuration multi-bot.
-
-### 2. README du dépôt obsolète
-
-Le README actuellement en ligne ne reflète plus correctement :
-
-- les coordonnées Maven réelles ;
-- la configuration multi-bot ;
-- la gestion des callbacks ;
-- `TelegramView` et les boutons inline ;
-- la stratégie de retry ;
-- le contexte courant par bot ;
-- l'architecture des registries.
-
-### 3. Point d'entrée applicatif
-
-Le module publié ne doit pas exposer de point d'entrée applicatif de démonstration. Le démarrage du polling est désormais entièrement géré par l'auto-configuration et `TelegramBotRegistrationManager`.
 
 ---
 
-## Proposition de structure de README officielle
+## Licence
+This project is licensed under the Apache License 2.0 with Commons Clause.
 
-Pour une version publique propre, je te recommanderais de garder cette structure :
+✔ You are allowed to:
 
-1. Présentation
-2. Installation
-3. Configuration YAML
-4. Démarrage rapide
-5. Annotations
-6. TelegramUpdateContext
-7. Callback queries
-8. TelegramView
-9. Multi-bot
-10. Validation et règles
-11. API d'envoi
-12. Roadmap / limitations
+* Use the software for personal or internal business use
+* Modify and distribute it
+* Contribute to the project
 
----
+❌ You are NOT allowed to:
 
-Ce document peut servir de base directe pour remplacer le `README.md` du dépôt, ou pour produire une documentation de module plus complète.
+* Sell this software
+* Sell a product or service primarily based on this software
+
+See the LICENSE file for full details.
