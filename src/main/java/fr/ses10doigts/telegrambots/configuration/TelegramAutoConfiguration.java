@@ -163,7 +163,7 @@ public class TelegramAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public TelegramBuiltinController telegramBuiltinController() {
-        return new TelegramBuiltinController();
+    public TelegramBuiltinController telegramBuiltinController(TelegramHandlerRegistry telegramHandlerRegistry) {
+        return new TelegramBuiltinController(telegramHandlerRegistry);
     }
 }
