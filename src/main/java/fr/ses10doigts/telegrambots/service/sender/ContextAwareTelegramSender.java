@@ -41,6 +41,11 @@ public class ContextAwareTelegramSender implements TelegramSender {
     }
 
     @Override
+    public void sendTextDocument(Long chatId, String content, String fileName, String caption) {
+        resolveCurrentSender().sendTextDocument(chatId, content, fileName, caption);
+    }
+
+    @Override
     public void sendDocument(Long chatId, String documentPath, String caption) {
         resolveCurrentSender().sendDocument(chatId, documentPath, caption);
     }
