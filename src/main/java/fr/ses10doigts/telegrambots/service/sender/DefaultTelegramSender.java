@@ -17,7 +17,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -201,6 +203,24 @@ public class DefaultTelegramSender implements TelegramSender {
         }
     }
 
+    @Override
+    public void sendTextDocument(Long chatId, String content, String fileName, String caption) {
+        try {
+            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+
+            InputFile inputFile = new InputFile(
+                    new ByteArrayInputStream(bytes),
+                    fileName
+            );
+
+            SendDocument sendDocument = new SendDocument(chatId.toString(), inputFile);
+            sendDocument.setCaption(caption);
+
+            executeWithRetry("sendTextDocument", () -> client.execute(sendDocument));
+        } catch (Exception e) {
+            log.error("Telegram sendTextDocument error", e);
+        }
+    }
 
     private <T> T executeWithRetry(String actionName, TelegramCall<T> call) throws Exception {
 
