@@ -4,6 +4,7 @@ import fr.ses10doigts.telegrambots.model.TelegramCommandDefinition;
 import fr.ses10doigts.telegrambots.model.TelegramUpdateContext;
 import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistry;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ class TelegramBuiltinControllerTest {
                 new TelegramCommandDefinition("/help", "List available commands")
         ));
 
-        TelegramBuiltinController controller = new TelegramBuiltinController(registry);
+        TelegramBuiltinController controller = new TelegramBuiltinController(providerOf(registry));
 
         String result = controller.help(context("bot-1"));
 
@@ -42,7 +43,7 @@ class TelegramBuiltinControllerTest {
                 new TelegramCommandDefinition("/help", "")
         ));
 
-        TelegramBuiltinController controller = new TelegramBuiltinController(registry);
+        TelegramBuiltinController controller = new TelegramBuiltinController(providerOf(registry));
 
         String result = controller.help(context("bot-1"));
 
@@ -63,5 +64,12 @@ class TelegramBuiltinControllerTest {
                 false,
                 null
         );
+    }
+
+    private ObjectProvider<TelegramHandlerRegistry> providerOf(TelegramHandlerRegistry registry) {
+        @SuppressWarnings("unchecked")
+        ObjectProvider<TelegramHandlerRegistry> provider = mock(ObjectProvider.class);
+        when(provider.getObject()).thenReturn(registry);
+        return provider;
     }
 }

@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
@@ -163,7 +164,9 @@ public class TelegramAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public TelegramBuiltinController telegramBuiltinController(TelegramHandlerRegistry telegramHandlerRegistry) {
-        return new TelegramBuiltinController(telegramHandlerRegistry);
+    public TelegramBuiltinController telegramBuiltinController(
+            ObjectProvider<TelegramHandlerRegistry> telegramHandlerRegistryProvider
+    ) {
+        return new TelegramBuiltinController(telegramHandlerRegistryProvider);
     }
 }

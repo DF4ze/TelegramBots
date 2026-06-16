@@ -6,6 +6,7 @@ import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistr
 import fr.ses10doigts.telegrambots.service.poller.handler.annot.Command;
 import fr.ses10doigts.telegrambots.service.poller.handler.annot.TelegramController;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TelegramBuiltinController {
 
-    private final TelegramHandlerRegistry registry;
+    private final ObjectProvider<TelegramHandlerRegistry> registryProvider;
 
     @Command(value="/whoami", description = "Get the 'lib' bot name")
     public String whoami(TelegramUpdateContext context) {
@@ -22,6 +23,7 @@ public class TelegramBuiltinController {
 
     @Command(value = "/help", description = "List available commands")
     public String help(TelegramUpdateContext context) {
+        TelegramHandlerRegistry registry = registryProvider.getObject();
         List<TelegramCommandDefinition> commands = registry.getCommandDefinitions(context.getBotId());
 
         if (commands.isEmpty()) {
