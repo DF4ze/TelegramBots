@@ -12,6 +12,7 @@ import java.util.List;
 public class TelegramProperties {
 
     private boolean enabled = false;
+    private boolean builtinControllerEnabled = true;
     private String defaultBotId;
     @NestedConfigurationProperty
     private TelegramPollingLoggingProperties pollingLogging = new TelegramPollingLoggingProperties();

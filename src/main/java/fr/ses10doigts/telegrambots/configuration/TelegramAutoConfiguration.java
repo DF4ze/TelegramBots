@@ -164,6 +164,7 @@ public class TelegramAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "telegram", name = "builtin-controller-enabled", havingValue = "true", matchIfMissing = true)
     public TelegramBuiltinController telegramBuiltinController(
             ObjectProvider<TelegramHandlerRegistry> telegramHandlerRegistryProvider
     ) {
