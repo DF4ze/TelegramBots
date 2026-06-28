@@ -11,6 +11,7 @@ import fr.ses10doigts.telegrambots.service.poller.TelegramUpdateDispatcher;
 import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistry;
 import fr.ses10doigts.telegrambots.service.poller.command.TelegramCommandRegistrar;
 import fr.ses10doigts.telegrambots.service.sender.ContextAwareTelegramSender;
+import fr.ses10doigts.telegrambots.service.sender.SimpleTelegramSender;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSender;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSenderRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -93,6 +94,23 @@ public class TelegramAutoConfiguration {
             CurrentTelegramBotContext currentTelegramBotContext
     ) {
         return new ContextAwareTelegramSender(telegramSenderRegistry, currentTelegramBotContext);
+    }
+
+    /**
+     * Expose {@link SimpleTelegramSender} comme bean Spring.
+     *
+     * <p>{@link SimpleTelegramSender} est annoté {@code @Service} mais son package
+     * n'est pas scanné par les applications consommatrices — c'est la règle pour toute
+     * librairie Spring Boot : les beans réutilisables doivent être déclarés ici, dans
+     * l'auto-configuration, et non via component-scan.</p>
+     *
+     * @param registry registre des senders par bot
+     * @return sender façade simplifié, disponible pour injection dans les apps
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
+    public SimpleTelegramSender simpleTelegramSender(TelegramSenderRegistry registry) {
+        return new SimpleTelegramSender(registry);
     }
 
     @Bean

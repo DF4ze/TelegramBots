@@ -2,9 +2,15 @@ package fr.ses10doigts.telegrambots.service.sender;
 
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
+/**
+ * Façade simplifiée pour l'envoi de messages Telegram par bot nommé.
+ *
+ * <p>Délègue à {@link TelegramSenderRegistry} le routage vers le bon bot.
+ * Ce composant est instancié par {@code TelegramAutoConfiguration} — pas via
+ * {@code @Service} / component-scan, ce qui le rendrait invisible aux applications
+ * consommatrices dont le scan ne couvre pas ce package.</p>
+ */
 @RequiredArgsConstructor
 public class SimpleTelegramSender {
 
