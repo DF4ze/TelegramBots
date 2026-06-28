@@ -60,6 +60,7 @@ class TelegramBuiltinControllerTest {
                 null,
                 null,
                 null,
+                null,
                 List.of(),
                 false,
                 null

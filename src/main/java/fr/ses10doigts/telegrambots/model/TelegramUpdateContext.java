@@ -16,6 +16,7 @@ public class TelegramUpdateContext {
 
     private Update update;
     private Message message;
+    private Integer messageId;
 
     private Long chatId;
     private Long userId;
@@ -35,6 +36,7 @@ public class TelegramUpdateContext {
         }
 
         Message message = null;
+        Integer messageId = null;
         Long chatId = null;
         Long userId = null;
         String text = null;
@@ -59,6 +61,7 @@ public class TelegramUpdateContext {
 
             if (callbackQuery.getMessage() instanceof Message accessibleMessage) {
                 message = accessibleMessage;
+                messageId = accessibleMessage.getMessageId();
                 chatId = accessibleMessage.getChatId();
 
                 if (accessibleMessage.hasText()) {
@@ -71,6 +74,7 @@ public class TelegramUpdateContext {
                 return null;
             }
 
+            messageId = message.getMessageId();
             chatId = message.getChatId();
 
             if (message.getFrom() != null) {
@@ -95,6 +99,7 @@ public class TelegramUpdateContext {
                 botId,
                 update,
                 message,
+                messageId,
                 chatId,
                 userId,
                 text,

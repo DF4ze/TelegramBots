@@ -58,6 +58,9 @@ L'objectif est de permettre d'écrire des bots Telegram en Java avec une approch
     - photos ;
     - documents ;
     - vues avec clavier inline.
+- Édition de messages texte et de vues inline.
+- Suppression de messages par `messageId`.
+- Actions de présence Telegram (`typing`, etc.).
 - **Auto-registration** des commandes via l'API Telegram.
 - Configuration du **menu button** Telegram pour afficher les commandes.
 - **Retry** configurable pour les appels d'envoi.
@@ -472,11 +475,26 @@ L'interface `TelegramSender` expose actuellement :
 ```java
 public interface TelegramSender {
     void sendMessage(Long chatId, String text);
+    TelegramMessageReference sendMessageAndGetReference(Long chatId, String text);
     void sendMarkdownMessage(Long chatId, String text);
     void sendMarkdownMessagePreservingLinks(Long chatId, String text);
+    TelegramMessageReference sendMarkdownMessageAndGetReference(Long chatId, String text);
+    TelegramMessageReference sendMarkdownMessagePreservingLinksAndGetReference(Long chatId, String text);
     void sendPhoto(Long chatId, String photoPath, String caption);
+    TelegramMessageReference sendPhotoAndGetReference(Long chatId, String photoPath, String caption);
+    void sendTextDocument(Long chatId, String content, String fileName, String caption);
+    TelegramMessageReference sendTextDocumentAndGetReference(Long chatId, String content, String fileName, String caption);
     void sendDocument(Long chatId, String documentPath, String caption);
+    TelegramMessageReference sendDocumentAndGetReference(Long chatId, String documentPath, String caption);
     void sendView(Long chatId, TelegramView view);
+    TelegramMessageReference sendViewAndGetReference(Long chatId, TelegramView view);
+    TelegramMessageReference editMessage(Long chatId, Integer messageId, String text);
+    TelegramMessageReference editMarkdownMessage(Long chatId, Integer messageId, String text);
+    TelegramMessageReference editMarkdownMessagePreservingLinks(Long chatId, Integer messageId, String text);
+    TelegramMessageReference editView(Long chatId, Integer messageId, TelegramView view);
+    boolean deleteMessage(Long chatId, Integer messageId);
+    void sendChatAction(Long chatId, TelegramTypingAction action);
+    void sendTyping(Long chatId);
     void answerCallbackQuery(String callbackQueryId);
 }
 ```
@@ -487,6 +505,13 @@ public interface TelegramSender {
 
 ```java
 telegramSender.sendMessage(chatId, "Hello!");
+```
+
+#### Message simple avec récupération du `messageId`
+
+```java
+TelegramMessageReference sent = telegramSender.sendMessageAndGetReference(chatId, "Hello!");
+Integer messageId = sent.getMessageId();
 ```
 
 #### Message Markdown
@@ -515,6 +540,50 @@ telegramSender.sendPhoto(chatId, "/tmp/chart.png", "Daily chart");
 ```java
 telegramSender.sendDocument(chatId, "/tmp/report.pdf", "Weekly report");
 ```
+
+#### Édition d'un message existant
+
+```java
+telegramSender.editMessage(chatId, messageId, "Updated content");
+```
+
+#### Édition d'une vue avec boutons inline
+
+```java
+telegramSender.editView(chatId, messageId, TelegramView.builder()
+        .text("Choisis une autre action")
+        .buttons(List.of(
+                List.of(
+                        new TelegramButtonView("Retry", "menu:retry")
+                )
+        ))
+        .build());
+```
+
+#### Suppression d'un message
+
+```java
+telegramSender.deleteMessage(chatId, messageId);
+```
+
+#### Indication "bot est en train d'écrire"
+
+```java
+telegramSender.sendTyping(chatId);
+```
+
+### `TelegramMessageReference`
+
+Les méthodes `*AndGetReference(...)` retournent une référence légère :
+
+```java
+TelegramMessageReference reference = TelegramMessageReference.builder()
+        .chatId(chatId)
+        .messageId(messageId)
+        .build();
+```
+
+Elle sert à conserver les identifiants nécessaires pour rééditer ou supprimer un message plus tard.
 
 ## Enregistrement automatique des commandes
 

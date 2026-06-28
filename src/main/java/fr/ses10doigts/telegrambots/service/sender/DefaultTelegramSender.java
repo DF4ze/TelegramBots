@@ -3,14 +3,21 @@ package fr.ses10doigts.telegrambots.service.sender;
 import fr.ses10doigts.telegrambots.configuration.TelegramRetryProperties;
 import fr.ses10doigts.telegrambots.model.TelegramButtonView;
 import fr.ses10doigts.telegrambots.model.TelegramMessageFormat;
+import fr.ses10doigts.telegrambots.model.TelegramMessageReference;
+import fr.ses10doigts.telegrambots.model.TelegramTypingAction;
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
@@ -26,86 +33,107 @@ import java.util.List;
 @Slf4j
 public class DefaultTelegramSender implements TelegramSender {
 
-
     private final TelegramClient client;
     private final TelegramRetryProperties retryProperties;
 
     public DefaultTelegramSender(String botToken, TelegramRetryProperties retryProperties) {
-        this.client = new OkHttpTelegramClient(botToken);
+        this(new OkHttpTelegramClient(botToken), retryProperties);
+    }
+
+    DefaultTelegramSender(TelegramClient client, TelegramRetryProperties retryProperties) {
+        this.client = client;
         this.retryProperties = retryProperties != null ? retryProperties : new TelegramRetryProperties();
     }
 
+    /**
+     * Envoie un message texte simple.
+     */
     @Override
     public void sendMessage(Long chatId, String text) {
-        sendText(chatId, text, null);
+        sendMessageAndGetReference(chatId, text);
     }
 
+    /**
+     * Envoie un message texte simple et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendMessageAndGetReference(Long chatId, String text) {
+        return sendText(chatId, text, null, null);
+    }
+
+    /**
+     * Envoie un message Markdown V2 échappé.
+     */
     @Override
     public void sendMarkdownMessage(Long chatId, String text) {
-        sendText(chatId, TelegramMarkdownUtils.escapeMarkdownV2(text), "MarkdownV2");
+        sendMarkdownMessageAndGetReference(chatId, text);
     }
 
+    /**
+     * Envoie un message Markdown V2 échappé et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendMarkdownMessageAndGetReference(Long chatId, String text) {
+        return sendText(chatId, TelegramMarkdownUtils.escapeMarkdownV2(text), "MarkdownV2", null);
+    }
+
+    /**
+     * Envoie un message Markdown V2 en préservant les liens.
+     */
     @Override
     public void sendMarkdownMessagePreservingLinks(Long chatId, String text) {
-        sendText(chatId, TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(text), "MarkdownV2");
+        sendMarkdownMessagePreservingLinksAndGetReference(chatId, text);
     }
 
+    /**
+     * Envoie un message Markdown V2 en préservant les liens et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendMarkdownMessagePreservingLinksAndGetReference(Long chatId, String text) {
+        return sendText(chatId, TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(text), "MarkdownV2", null);
+    }
+
+    /**
+     * Envoie une vue Telegram.
+     */
     @Override
     public void sendView(Long chatId, TelegramView view) {
+        sendViewAndGetReference(chatId, view);
+    }
+
+    /**
+     * Envoie une vue Telegram et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendViewAndGetReference(Long chatId, TelegramView view) {
         if (view == null) {
             log.warn("TelegramView is null, nothing sent for chatId={}", chatId);
-            return;
+            return null;
         }
 
         String text = view.getText();
-        TelegramMessageFormat format = view.getFormat() != null ? view.getFormat() : TelegramMessageFormat.PLAIN;
         boolean hasButtons = view.getButtons() != null && !view.getButtons().isEmpty();
 
         if (!hasButtons && (text == null || text.isBlank())) {
             log.warn("TelegramView text is blank and no buttons are present, nothing sent for chatId={}", chatId);
-            return;
+            return null;
         }
 
         if (!hasButtons) {
-            switch (format) {
-                case MARKDOWN -> sendMarkdownMessage(chatId, text);
-                case MARKDOWN_PRESERVE_LINKS -> sendMarkdownMessagePreservingLinks(chatId, text);
-                default -> sendMessage(chatId, text);
-            }
-            return;
+            return switch (resolveFormat(view)) {
+                case MARKDOWN -> sendMarkdownMessageAndGetReference(chatId, text);
+                case MARKDOWN_PRESERVE_LINKS -> sendMarkdownMessagePreservingLinksAndGetReference(chatId, text);
+                default -> sendMessageAndGetReference(chatId, text);
+            };
         }
 
-        try {
-            String effectiveText = (text == null || text.isBlank()) ? "Question :" : text;
-            String messageText = effectiveText;
-            String parseMode = null;
-
-            switch (format) {
-                case MARKDOWN -> {
-                    messageText = TelegramMarkdownUtils.escapeMarkdownV2(effectiveText);
-                    parseMode = "MarkdownV2";
-                }
-                case MARKDOWN_PRESERVE_LINKS -> {
-                    messageText = TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(effectiveText);
-                    parseMode = "MarkdownV2";
-                }
-                default -> {
-                }
-            }
-
-            SendMessage sendMessage = new SendMessage(chatId.toString(), messageText);
-            sendMessage.setDisableWebPagePreview(true);
-            sendMessage.setReplyMarkup(buildInlineKeyboard(view.getButtons()));
-            if (parseMode != null) {
-                sendMessage.setParseMode(parseMode);
-            }
-
-            executeWithRetry("sendView", () -> client.execute(sendMessage));
-        } catch (Exception e) {
-            log.error("Telegram sendView error", e);
-        }
+        PreparedText preparedText = prepareViewText(view);
+        return sendText(chatId, preparedText.text(), preparedText.parseMode(), buildInlineKeyboard(view.getButtons()));
     }
 
+    /**
+     * Envoie l'acquittement d'une callback query Telegram.
+     */
     @Override
     public void answerCallbackQuery(String callbackQueryId) {
         try {
@@ -119,6 +147,189 @@ public class DefaultTelegramSender implements TelegramSender {
         }
     }
 
+    /**
+     * Édite le texte d'un message existant.
+     */
+    @Override
+    public TelegramMessageReference editMessage(Long chatId, Integer messageId, String text) {
+        return editText(chatId, messageId, text, null, null);
+    }
+
+    /**
+     * Édite le texte Markdown V2 d'un message existant.
+     */
+    @Override
+    public TelegramMessageReference editMarkdownMessage(Long chatId, Integer messageId, String text) {
+        return editText(chatId, messageId, TelegramMarkdownUtils.escapeMarkdownV2(text), "MarkdownV2", null);
+    }
+
+    /**
+     * Édite le texte Markdown V2 d'un message existant en préservant les liens.
+     */
+    @Override
+    public TelegramMessageReference editMarkdownMessagePreservingLinks(Long chatId, Integer messageId, String text) {
+        return editText(chatId, messageId, TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(text), "MarkdownV2", null);
+    }
+
+    /**
+     * Édite une vue Telegram existante.
+     */
+    @Override
+    public TelegramMessageReference editView(Long chatId, Integer messageId, TelegramView view) {
+        if (view == null) {
+            log.warn("TelegramView is null, nothing edited for chatId={} messageId={}", chatId, messageId);
+            return null;
+        }
+
+        boolean hasButtons = view.getButtons() != null && !view.getButtons().isEmpty();
+        String text = view.getText();
+
+        if (!hasButtons && (text == null || text.isBlank())) {
+            log.warn("TelegramView text is blank and no buttons are present, nothing edited for chatId={} messageId={}", chatId, messageId);
+            return null;
+        }
+
+        if (text == null || text.isBlank()) {
+            return editReplyMarkup(chatId, messageId, buildInlineKeyboard(view.getButtons()));
+        }
+
+        PreparedText preparedText = prepareViewText(view);
+        InlineKeyboardMarkup replyMarkup = hasButtons ? buildInlineKeyboard(view.getButtons()) : null;
+        return editText(chatId, messageId, preparedText.text(), preparedText.parseMode(), replyMarkup);
+    }
+
+    /**
+     * Supprime un message existant.
+     */
+    @Override
+    public boolean deleteMessage(Long chatId, Integer messageId) {
+        try {
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            return executeWithRetry("deleteMessage", () -> client.execute(deleteMessage));
+        } catch (Exception e) {
+            log.error("Telegram deleteMessage error", e);
+            return false;
+        }
+    }
+
+    /**
+     * Envoie une action de présence Telegram.
+     */
+    @Override
+    public void sendChatAction(Long chatId, TelegramTypingAction action) {
+        try {
+            SendChatAction sendChatAction = SendChatAction.builder()
+                    .chatId(chatId)
+                    .action(action.getApiValue())
+                    .build();
+
+            executeWithRetry("sendChatAction", () -> client.execute(sendChatAction));
+        } catch (Exception e) {
+            log.error("Telegram sendChatAction error", e);
+        }
+    }
+
+    /**
+     * Déclenche l'indication "est en train d'écrire".
+     */
+    @Override
+    public void sendTyping(Long chatId) {
+        sendChatAction(chatId, TelegramTypingAction.TYPING);
+    }
+
+    /**
+     * Envoie une photo.
+     */
+    @Override
+    public void sendPhoto(Long chatId, String photoPath, String caption) {
+        sendPhotoAndGetReference(chatId, photoPath, caption);
+    }
+
+    /**
+     * Envoie une photo et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendPhotoAndGetReference(Long chatId, String photoPath, String caption) {
+        try {
+            SendPhoto sendPhoto = new SendPhoto(
+                    chatId.toString(),
+                    new InputFile(new File(photoPath))
+            );
+            sendPhoto.setCaption(caption);
+            Message message = executeWithRetry("sendPhoto", () -> client.execute(sendPhoto));
+            return toReference(message, chatId);
+        } catch (Exception e) {
+            log.error("Telegram sendPhoto error", e);
+            return null;
+        }
+    }
+
+    /**
+     * Envoie un document.
+     */
+    @Override
+    public void sendDocument(Long chatId, String documentPath, String caption) {
+        sendDocumentAndGetReference(chatId, documentPath, caption);
+    }
+
+    /**
+     * Envoie un document et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendDocumentAndGetReference(Long chatId, String documentPath, String caption) {
+        try {
+            SendDocument sendDocument = new SendDocument(
+                    chatId.toString(),
+                    new InputFile(new File(documentPath))
+            );
+            sendDocument.setCaption(caption);
+            Message message = executeWithRetry("sendDocument", () -> client.execute(sendDocument));
+            return toReference(message, chatId);
+        } catch (Exception e) {
+            log.error("Telegram sendDocument error", e);
+            return null;
+        }
+    }
+
+    /**
+     * Envoie un document texte généré à la volée.
+     */
+    @Override
+    public void sendTextDocument(Long chatId, String content, String fileName, String caption) {
+        sendTextDocumentAndGetReference(chatId, content, fileName, caption);
+    }
+
+    /**
+     * Envoie un document texte généré à la volée et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendTextDocumentAndGetReference(Long chatId, String content, String fileName, String caption) {
+        try {
+            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+
+            InputFile inputFile = new InputFile(
+                    new ByteArrayInputStream(bytes),
+                    fileName
+            );
+
+            SendDocument sendDocument = new SendDocument(chatId.toString(), inputFile);
+            sendDocument.setCaption(caption);
+
+            Message message = executeWithRetry("sendTextDocument", () -> client.execute(sendDocument));
+            return toReference(message, chatId);
+        } catch (Exception e) {
+            log.error("Telegram sendTextDocument error", e);
+            return null;
+        }
+    }
+
+    /**
+     * Construit le clavier inline demandé par la vue Telegram.
+     */
     private InlineKeyboardMarkup buildInlineKeyboard(List<List<TelegramButtonView>> buttonRows) {
         List<InlineKeyboardRow> keyboard = new ArrayList<>();
 
@@ -160,7 +371,36 @@ public class DefaultTelegramSender implements TelegramSender {
                 .build();
     }
 
-    private void sendText(Long chatId, String text, String parseMode) {
+    /**
+     * Prépare le texte et le parse mode d'une vue Telegram.
+     */
+    private PreparedText prepareViewText(TelegramView view) {
+        String effectiveText = (view.getText() == null || view.getText().isBlank()) ? "Question :" : view.getText();
+
+        return switch (resolveFormat(view)) {
+            case MARKDOWN -> new PreparedText(
+                    TelegramMarkdownUtils.escapeMarkdownV2(effectiveText),
+                    "MarkdownV2"
+            );
+            case MARKDOWN_PRESERVE_LINKS -> new PreparedText(
+                    TelegramMarkdownUtils.escapeMarkdownV2PreservingLinks(effectiveText),
+                    "MarkdownV2"
+            );
+            default -> new PreparedText(effectiveText, null);
+        };
+    }
+
+    /**
+     * Retourne le format effectif d'une vue Telegram.
+     */
+    private TelegramMessageFormat resolveFormat(TelegramView view) {
+        return view.getFormat() != null ? view.getFormat() : TelegramMessageFormat.PLAIN;
+    }
+
+    /**
+     * Envoie un message texte avec parse mode et clavier inline optionnels.
+     */
+    private TelegramMessageReference sendText(Long chatId, String text, String parseMode, InlineKeyboardMarkup replyMarkup) {
         try {
             SendMessage sendMessage = new SendMessage(chatId.toString(), text);
             sendMessage.setDisableWebPagePreview(true);
@@ -169,59 +409,92 @@ public class DefaultTelegramSender implements TelegramSender {
                 sendMessage.setParseMode(parseMode);
             }
 
-            Object unused = executeWithRetry("sendMessage", () -> client.execute(sendMessage));
+            if (replyMarkup != null) {
+                sendMessage.setReplyMarkup(replyMarkup);
+            }
+
+            Message message = executeWithRetry("sendMessage", () -> client.execute(sendMessage));
+            return toReference(message, chatId);
         } catch (Exception e) {
             log.error("Telegram sendMessage error", e);
+            return null;
         }
     }
 
-    @Override
-    public void sendPhoto(Long chatId, String photoPath, String caption) {
+    /**
+     * Édite le texte d'un message existant.
+     */
+    private TelegramMessageReference editText(Long chatId, Integer messageId, String text, String parseMode, InlineKeyboardMarkup replyMarkup) {
         try {
-            SendPhoto sendPhoto = new SendPhoto(
-                    chatId.toString(),
-                    new InputFile(new File(photoPath))
-            );
-            sendPhoto.setCaption(caption);
-            executeWithRetry("sendPhoto", () -> client.execute(sendPhoto));
+            EditMessageText editMessageText = EditMessageText.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .text(text)
+                    .build();
+            editMessageText.setDisableWebPagePreview(true);
+            editMessageText.setReplyMarkup(replyMarkup);
+            if (parseMode != null) {
+                editMessageText.setParseMode(parseMode);
+            }
+
+            Object editedMessage = executeWithRetry("editMessage", () -> client.execute(editMessageText));
+            return toReference(editedMessage, chatId, messageId);
         } catch (Exception e) {
-            log.error("Telegram sendPhoto error", e);
+            log.error("Telegram editMessage error", e);
+            return null;
         }
     }
 
-    @Override
-    public void sendDocument(Long chatId, String documentPath, String caption) {
+    /**
+     * Édite uniquement le clavier inline d'un message existant.
+     */
+    private TelegramMessageReference editReplyMarkup(Long chatId, Integer messageId, InlineKeyboardMarkup replyMarkup) {
         try {
-            SendDocument sendDocument = new SendDocument(
-                    chatId.toString(),
-                    new InputFile(new File(documentPath))
-            );
-            sendDocument.setCaption(caption);
-            executeWithRetry("sendDocument", () -> client.execute(sendDocument));
+            EditMessageReplyMarkup editMessageReplyMarkup = EditMessageReplyMarkup.builder()
+                    .chatId(chatId.toString())
+                    .messageId(messageId)
+                    .replyMarkup(replyMarkup)
+                    .build();
+
+            Object editedMessage = executeWithRetry("editMessageReplyMarkup", () -> client.execute(editMessageReplyMarkup));
+            return toReference(editedMessage, chatId, messageId);
         } catch (Exception e) {
-            log.error("Telegram sendDocument error", e);
+            log.error("Telegram editMessageReplyMarkup error", e);
+            return null;
         }
     }
 
-    @Override
-    public void sendTextDocument(Long chatId, String content, String fileName, String caption) {
-        try {
-            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-
-            InputFile inputFile = new InputFile(
-                    new ByteArrayInputStream(bytes),
-                    fileName
-            );
-
-            SendDocument sendDocument = new SendDocument(chatId.toString(), inputFile);
-            sendDocument.setCaption(caption);
-
-            executeWithRetry("sendTextDocument", () -> client.execute(sendDocument));
-        } catch (Exception e) {
-            log.error("Telegram sendTextDocument error", e);
+    /**
+     * Construit une référence à partir d'un message Telegram renvoyé par l'API.
+     */
+    private TelegramMessageReference toReference(Message message, Long fallbackChatId) {
+        if (message == null) {
+            return null;
         }
+
+        return TelegramMessageReference.builder()
+                .chatId(message.getChatId() != null ? message.getChatId() : fallbackChatId)
+                .messageId(message.getMessageId())
+                .build();
     }
 
+    /**
+     * Construit une référence à partir d'une réponse Telegram de type Message ou Boolean.
+     */
+    private TelegramMessageReference toReference(Object result, Long fallbackChatId, Integer fallbackMessageId) {
+        if (result instanceof Message message) {
+            return toReference(message, fallbackChatId);
+        }
+
+        return TelegramMessageReference.builder()
+                .chatId(fallbackChatId)
+                .messageId(fallbackMessageId)
+                .build();
+    }
+
+    /**
+     * Exécute un appel Telegram avec retry optionnel.
+     */
     private <T> T executeWithRetry(String actionName, TelegramCall<T> call) throws Exception {
 
         if (!retryProperties.isEnabled()) {
@@ -261,6 +534,9 @@ public class DefaultTelegramSender implements TelegramSender {
         throw lastException;
     }
 
+    /**
+     * Indique si une erreur Telegram mérite un retry.
+     */
     private boolean isRetryable(Exception exception) {
         if (!(exception instanceof TelegramApiException telegramApiException)) {
             return true;
@@ -284,4 +560,6 @@ public class DefaultTelegramSender implements TelegramSender {
         return !lowerMessage.contains("404 not found");
     }
 
+    private record PreparedText(String text, String parseMode) {
+    }
 }

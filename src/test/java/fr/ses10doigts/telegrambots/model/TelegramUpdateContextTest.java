@@ -26,6 +26,7 @@ class TelegramUpdateContextTest {
         assertNotNull(context);
         assertEquals(BOT_ID, context.getBotId());
         assertSame(update, context.getUpdate());
+        assertEquals(321, context.getMessageId());
         assertEquals(100L, context.getChatId());
         assertEquals(200L, context.getUserId());
         assertEquals("hello world", context.getText());
@@ -57,6 +58,7 @@ class TelegramUpdateContextTest {
         assertNotNull(context);
         assertTrue(context.isCallbackQuery());
         assertEquals("BTN_CLICK", context.getCallbackData());
+        assertEquals(654, context.getMessageId());
         assertEquals(123L, context.getChatId());
         assertEquals(456L, context.getUserId());
         assertEquals("menu text", context.getText());
@@ -144,6 +146,7 @@ class TelegramUpdateContextTest {
         assertTrue(context.isCallbackQuery());
         assertNull(context.getCallbackData());
         assertNull(context.getChatId());
+        assertNull(context.getMessageId());
         assertNull(context.getUserId());
         assertNull(context.getText());
     }
@@ -159,6 +162,7 @@ class TelegramUpdateContextTest {
         when(user.getId()).thenReturn(userId);
         when(message.getChat()).thenReturn(chat);
         when(message.getChatId()).thenReturn(chatId);
+        when(message.getMessageId()).thenReturn(321);
         when(message.getFrom()).thenReturn(user);
         when(message.hasText()).thenReturn(true);
         when(message.getText()).thenReturn(text);
@@ -179,6 +183,7 @@ class TelegramUpdateContextTest {
         when(user.getId()).thenReturn(userId);
         when(message.getChat()).thenReturn(chat);
         when(message.getChatId()).thenReturn(chatId);
+        when(message.getMessageId()).thenReturn(654);
         when(message.hasText()).thenReturn(true);
         when(message.getText()).thenReturn(messageText);
         when(callbackQuery.getMessage()).thenReturn(message);

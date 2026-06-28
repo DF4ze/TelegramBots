@@ -105,6 +105,7 @@ class TelegramUpdateDispatcherTest {
         verify(registry).findCallbackHandler("bot-1", "confirm");
         verify(sender).sendMessage(100L, "callback-ok");
         assertThat(controller.invocationCount).isEqualTo(1);
+        assertThat(controller.lastContext.getMessageId()).isEqualTo(777);
     }
 
     @Test
@@ -203,6 +204,7 @@ class TelegramUpdateDispatcherTest {
 
         Message message = mock(Message.class);
         when(message.getChatId()).thenReturn(chatId);
+        when(message.getMessageId()).thenReturn(777);
         when(message.hasText()).thenReturn(true);
         when(message.getText()).thenReturn("/callback");
 
