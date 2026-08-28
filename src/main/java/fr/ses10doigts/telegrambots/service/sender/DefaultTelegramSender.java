@@ -399,8 +399,45 @@ public class DefaultTelegramSender implements TelegramSender {
 
     /**
      * Envoie un message texte avec parse mode et clavier inline optionnels.
+     *
+     * <p>Si {@code text} dépasse la limite Telegram ({@value TelegramMessageSplitter#TELEGRAM_MAX_MESSAGE_LENGTH}
+     * caractères), il est automatiquement découpé et envoyé sous forme de
+     * plusieurs messages consécutifs (voir {@link TelegramMessageSplitter}),
+     * au lieu d'échouer ou d'être rejeté par l'API Telegram. Le clavier
+     * inline, s'il y en a un, n'est attaché qu'au dernier morceau. La
+     * référence retournée est celle du dernier message envoyé avec succès.</p>
      */
     private TelegramMessageReference sendText(Long chatId, String text, String parseMode, InlineKeyboardMarkup replyMarkup) {
+        List<String> chunks = TelegramMessageSplitter.split(text);
+
+        if (chunks.size() <= 1) {
+            return sendSingleMessage(chatId, chunks.isEmpty() ? text : chunks.getFirst(), parseMode, replyMarkup);
+        }
+
+        log.debug("Telegram message exceeds {} characters (length={}), splitting into {} messages for chatId={}",
+                TelegramMessageSplitter.TELEGRAM_MAX_MESSAGE_LENGTH, text.length(), chunks.size(), chatId);
+
+        TelegramMessageReference lastReference = null;
+
+        for (int i = 0; i < chunks.size(); i++) {
+            boolean isLastChunk = i == chunks.size() - 1;
+            lastReference = sendSingleMessage(chatId, chunks.get(i), parseMode, isLastChunk ? replyMarkup : null);
+
+            if (lastReference == null) {
+                // Un morceau a échoué : on interrompt l'envoi des morceaux suivants
+                // pour éviter d'envoyer la suite hors d'ordre.
+                break;
+            }
+        }
+
+        return lastReference;
+    }
+
+    /**
+     * Envoie un unique morceau de message texte avec parse mode et clavier
+     * inline optionnels.
+     */
+    private TelegramMessageReference sendSingleMessage(Long chatId, String text, String parseMode, InlineKeyboardMarkup replyMarkup) {
         try {
             SendMessage sendMessage = new SendMessage(chatId.toString(), text);
             sendMessage.setDisableWebPagePreview(true);
@@ -423,8 +460,38 @@ public class DefaultTelegramSender implements TelegramSender {
 
     /**
      * Édite le texte d'un message existant.
+     *
+     * <p>Un message Telegram existant ne peut pas être scindé : si
+     * {@code text} dépasse la limite Telegram
+     * ({@value TelegramMessageSplitter#TELEGRAM_MAX_MESSAGE_LENGTH} caractères),
+     * le premier morceau remplace le texte du message édité (avec le clavier
+     * inline le cas échéant) et les morceaux suivants sont envoyés comme
+     * nouveaux messages à la suite, au lieu de faire échouer l'édition. La
+     * référence retournée reste celle du message édité.</p>
      */
     private TelegramMessageReference editText(Long chatId, Integer messageId, String text, String parseMode, InlineKeyboardMarkup replyMarkup) {
+        List<String> chunks = TelegramMessageSplitter.split(text);
+
+        if (chunks.size() <= 1) {
+            return editSingleMessage(chatId, messageId, chunks.isEmpty() ? text : chunks.getFirst(), parseMode, replyMarkup);
+        }
+
+        log.warn("Edited Telegram message exceeds {} characters (length={}); editing the first chunk and sending {} extra message(s) for chatId={} messageId={}",
+                TelegramMessageSplitter.TELEGRAM_MAX_MESSAGE_LENGTH, text.length(), chunks.size() - 1, chatId, messageId);
+
+        TelegramMessageReference editedReference = editSingleMessage(chatId, messageId, chunks.getFirst(), parseMode, replyMarkup);
+
+        for (int i = 1; i < chunks.size(); i++) {
+            sendSingleMessage(chatId, chunks.get(i), parseMode, null);
+        }
+
+        return editedReference;
+    }
+
+    /**
+     * Édite le texte d'un unique message existant (un morceau).
+     */
+    private TelegramMessageReference editSingleMessage(Long chatId, Integer messageId, String text, String parseMode, InlineKeyboardMarkup replyMarkup) {
         try {
             EditMessageText editMessageText = EditMessageText.builder()
                     .chatId(chatId)

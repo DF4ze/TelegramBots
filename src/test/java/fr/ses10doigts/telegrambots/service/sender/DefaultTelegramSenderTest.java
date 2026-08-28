@@ -93,4 +93,56 @@ class DefaultTelegramSenderTest {
 
         verify(client, times(2)).execute(any(SendChatAction.class));
     }
+
+    @Test
+    void shouldSplitLongMessageIntoMultipleSendMessageCallsInsteadOfFailing() throws Exception {
+        Message telegramMessage = mock(Message.class);
+        when(telegramMessage.getChatId()).thenReturn(100L);
+        when(telegramMessage.getMessageId()).thenReturn(55);
+        when(client.execute(any(SendMessage.class))).thenReturn(telegramMessage);
+
+        String longText = "a".repeat(9000);
+        int expectedChunks = (int) Math.ceil(longText.length() / (double) TelegramMessageSplitter.TELEGRAM_MAX_MESSAGE_LENGTH);
+
+        TelegramMessageReference reference = sender.sendMessageAndGetReference(100L, longText);
+
+        verify(client, times(expectedChunks)).execute(any(SendMessage.class));
+        assertThat(reference).isNotNull();
+        assertThat(reference.getMessageId()).isEqualTo(55);
+    }
+
+    @Test
+    void shouldNotSplitMessageWithinTheTelegramLimit() throws Exception {
+        Message telegramMessage = mock(Message.class);
+        when(telegramMessage.getChatId()).thenReturn(100L);
+        when(telegramMessage.getMessageId()).thenReturn(55);
+        when(client.execute(any(SendMessage.class))).thenReturn(telegramMessage);
+
+        String text = "a".repeat(TelegramMessageSplitter.TELEGRAM_MAX_MESSAGE_LENGTH);
+
+        sender.sendMessageAndGetReference(100L, text);
+
+        verify(client, times(1)).execute(any(SendMessage.class));
+    }
+
+    @Test
+    void shouldEditFirstChunkAndSendExtraMessagesWhenEditedTextExceedsTheLimit() throws Exception {
+        when(client.execute(any(EditMessageText.class))).thenReturn(Boolean.TRUE);
+
+        Message telegramMessage = mock(Message.class);
+        when(telegramMessage.getChatId()).thenReturn(100L);
+        when(telegramMessage.getMessageId()).thenReturn(999);
+        when(client.execute(any(SendMessage.class))).thenReturn(telegramMessage);
+
+        String longText = "b".repeat(9000);
+        int expectedChunks = (int) Math.ceil(longText.length() / (double) TelegramMessageSplitter.TELEGRAM_MAX_MESSAGE_LENGTH);
+
+        TelegramMessageReference reference = sender.editMessage(100L, 55, longText);
+
+        verify(client, times(1)).execute(any(EditMessageText.class));
+        verify(client, times(expectedChunks - 1)).execute(any(SendMessage.class));
+        assertThat(reference).isNotNull();
+        assertThat(reference.getChatId()).isEqualTo(100L);
+        assertThat(reference.getMessageId()).isEqualTo(55);
+    }
 }

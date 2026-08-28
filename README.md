@@ -59,6 +59,7 @@ L'objectif est de permettre d'écrire des bots Telegram en Java avec une approch
     - documents ;
     - vues avec clavier inline.
 - Édition de messages texte et de vues inline.
+- **Découpage automatique** des messages texte dépassant la limite Telegram (4096 caractères) en plusieurs messages.
 - Suppression de messages par `messageId`.
 - Actions de présence Telegram (`typing`, etc.).
 - **Auto-registration** des commandes via l'API Telegram.
@@ -498,6 +499,41 @@ public interface TelegramSender {
     void answerCallbackQuery(String callbackQueryId);
 }
 ```
+
+### Découpage automatique des messages trop longs
+
+Telegram refuse tout message texte dépassant **4096 caractères**. Plutôt que de laisser
+l'envoi échouer (ou être tronqué), `DefaultTelegramSender` découpe automatiquement les
+textes trop longs et les envoie sous forme de plusieurs messages consécutifs — de façon
+totalement transparente, sans changement d'API :
+
+```java
+// Si "texteTresLong" dépasse 4096 caractères, ceci envoie automatiquement
+// plusieurs messages Telegram à la suite plutôt qu'un seul.
+telegramSender.sendMessage(chatId, texteTresLong);
+```
+
+Règles du découpage (voir `TelegramMessageSplitter`) :
+
+- la coupure privilégie un saut de paragraphe (`\n\n`), puis un saut de ligne (`\n`),
+  puis un espace, avant de se rabattre sur une coupure brute si aucun séparateur n'est
+  disponible ;
+- la coupure ne casse jamais une séquence d'échappement MarkdownV2 (backslash + caractère
+  échappé) — un message Markdown échappé reste donc toujours valide après découpage ;
+- pour les méthodes `*AndGetReference`, la référence retournée est celle du **dernier**
+  message envoyé ;
+- pour `sendView`/`sendViewAndGetReference`, le clavier inline n'est attaché qu'au
+  **dernier** morceau ;
+- pour `editMessage` / `editMarkdownMessage` / `editView` (un message existant ne peut pas
+  être scindé en plusieurs messages), le premier morceau remplace le texte du message édité
+  (avec le clavier inline le cas échéant) et les morceaux suivants sont envoyés comme
+  nouveaux messages à la suite ; la référence retournée reste celle du message édité.
+
+⚠️ Le découpage ne comprend pas la syntaxe MarkdownV2 (gras, italique, liens, blocs de
+code…) : une mise en forme qui chevauche un point de coupure peut apparaître incomplète
+sur l'un des morceaux. Pour du contenu long généré automatiquement, il est préférable de
+structurer le texte en paragraphes (`\n\n`) pour guider le découpage vers des frontières
+logiques.
 
 ### Exemples
 
