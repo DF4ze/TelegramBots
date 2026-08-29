@@ -13,7 +13,7 @@ public class ContextAwareTelegramSender implements TelegramSender {
     private final CurrentTelegramBotContext currentTelegramBotContext;
 
     private TelegramSender resolveCurrentSender() {
-        String botId = currentTelegramBotContext.getRequiredCurrentBotId();
+        String botId = currentTelegramBotContext.getCurrentBotId();
 
         if( botId == null ) {
             return senderRegistry.getDefaultBotSender();
