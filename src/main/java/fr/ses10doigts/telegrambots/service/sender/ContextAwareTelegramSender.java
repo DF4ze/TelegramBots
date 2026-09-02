@@ -53,6 +53,21 @@ public class ContextAwareTelegramSender implements TelegramSender {
     }
 
     @Override
+    public void sendFormattedMessage(Long chatId, String markdownV2Text) {
+        resolveCurrentSender().sendFormattedMessage(chatId, markdownV2Text);
+    }
+
+    @Override
+    public TelegramMessageReference sendFormattedMessageAndGetReference(Long chatId, String markdownV2Text) {
+        return resolveCurrentSender().sendFormattedMessageAndGetReference(chatId, markdownV2Text);
+    }
+
+    @Override
+    public TelegramMessageReference editFormattedMessage(Long chatId, Integer messageId, String markdownV2Text) {
+        return resolveCurrentSender().editFormattedMessage(chatId, messageId, markdownV2Text);
+    }
+
+    @Override
     public void sendPhoto(Long chatId, String photoPath, String caption) {
         resolveCurrentSender().sendPhoto(chatId, photoPath, caption);
     }

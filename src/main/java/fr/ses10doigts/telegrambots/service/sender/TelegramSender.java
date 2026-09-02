@@ -37,6 +37,30 @@ public interface TelegramSender {
     TelegramMessageReference sendMarkdownMessagePreservingLinksAndGetReference(Long chatId, String text);
 
     /**
+     * Envoie un message dont le texte MarkdownV2 est déjà entièrement préparé par
+     * l'appelant (formatage volontaire : {@code *gras*}, {@code _italique_}, etc.),
+     * sans aucun échappement automatique - contrairement à {@link #sendMarkdownMessage},
+     * qui échappe tout le texte reçu et ne permet donc aucun formatage réel. Toute
+     * partie dynamique/non maîtrisée du texte doit être échappée au préalable via
+     * {@link TelegramMarkdownUtils#escapeMarkdownV2(String)}, sous peine d'erreur de
+     * parsing Telegram ("can't find end of the entity...") si elle contient un des
+     * caractères réservés MarkdownV2.
+     */
+    void sendFormattedMessage(Long chatId, String markdownV2Text);
+
+    /**
+     * Envoie un message MarkdownV2 déjà préparé par l'appelant (voir
+     * {@link #sendFormattedMessage}) et retourne sa référence Telegram.
+     */
+    TelegramMessageReference sendFormattedMessageAndGetReference(Long chatId, String markdownV2Text);
+
+    /**
+     * Édite le texte MarkdownV2 déjà préparé par l'appelant (voir
+     * {@link #sendFormattedMessage}) d'un message existant.
+     */
+    TelegramMessageReference editFormattedMessage(Long chatId, Integer messageId, String markdownV2Text);
+
+    /**
      * Envoie une photo sans exposer son identifiant.
      */
     void sendPhoto(Long chatId, String photoPath, String caption);

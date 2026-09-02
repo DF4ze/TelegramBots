@@ -46,6 +46,18 @@ public class SimpleTelegramSender {
         return resolveSender(botName).sendMarkdownMessagePreservingLinksAndGetReference(chatId, text);
     }
 
+    public void sendFormattedMessage(String botName, Long chatId, String markdownV2Text) {
+        resolveSender(botName).sendFormattedMessage(chatId, markdownV2Text);
+    }
+
+    public TelegramMessageReference sendFormattedMessageAndGetReference(String botName, Long chatId, String markdownV2Text) {
+        return resolveSender(botName).sendFormattedMessageAndGetReference(chatId, markdownV2Text);
+    }
+
+    public TelegramMessageReference editFormattedMessage(String botName, Long chatId, Integer messageId, String markdownV2Text) {
+        return resolveSender(botName).editFormattedMessage(chatId, messageId, markdownV2Text);
+    }
+
     public void sendPhoto(String botName, Long chatId, String photoPath, String caption) {
         resolveSender(botName).sendPhoto(chatId, photoPath, caption);
     }

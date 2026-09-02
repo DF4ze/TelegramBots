@@ -6,6 +6,7 @@ import fr.ses10doigts.telegrambots.model.TelegramTypingAction;
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
@@ -44,6 +45,44 @@ class DefaultTelegramSenderTest {
         assertThat(reference.getChatId()).isEqualTo(100L);
         assertThat(reference.getMessageId()).isEqualTo(55);
         verify(client).execute(any(SendMessage.class));
+    }
+
+    @Test
+    void shouldSendFormattedMessageWithoutEscapingAndWithMarkdownV2ParseMode() throws Exception {
+        Message telegramMessage = mock(Message.class);
+        when(telegramMessage.getChatId()).thenReturn(100L);
+        when(telegramMessage.getMessageId()).thenReturn(55);
+        ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
+        when(client.execute(captor.capture())).thenReturn(telegramMessage);
+
+        // Contient volontairement des caracteres reserves MarkdownV2 (*, _, .) deja
+        // echappes/formes par l'appelant : sendFormattedMessage ne doit RIEN toucher,
+        // contrairement a sendMarkdownMessage qui echapperait tout (voir TelegramMarkdownUtils).
+        String rawMarkdownV2 = "*Gras* et _italique_, point deja echappe\\.";
+
+        TelegramMessageReference reference = sender.sendFormattedMessageAndGetReference(100L, rawMarkdownV2);
+
+        assertThat(reference).isNotNull();
+        assertThat(reference.getChatId()).isEqualTo(100L);
+        assertThat(reference.getMessageId()).isEqualTo(55);
+        assertThat(captor.getValue().getText()).isEqualTo(rawMarkdownV2);
+        assertThat(captor.getValue().getParseMode()).isEqualTo("MarkdownV2");
+    }
+
+    @Test
+    void shouldEditFormattedMessageWithoutEscapingAndWithMarkdownV2ParseMode() throws Exception {
+        ArgumentCaptor<EditMessageText> captor = ArgumentCaptor.forClass(EditMessageText.class);
+        when(client.execute(captor.capture())).thenReturn(Boolean.TRUE);
+
+        String rawMarkdownV2 = "*Projet* mis a jour";
+
+        TelegramMessageReference reference = sender.editFormattedMessage(100L, 55, rawMarkdownV2);
+
+        assertThat(reference).isNotNull();
+        assertThat(reference.getChatId()).isEqualTo(100L);
+        assertThat(reference.getMessageId()).isEqualTo(55);
+        assertThat(captor.getValue().getText()).isEqualTo(rawMarkdownV2);
+        assertThat(captor.getValue().getParseMode()).isEqualTo("MarkdownV2");
     }
 
     @Test

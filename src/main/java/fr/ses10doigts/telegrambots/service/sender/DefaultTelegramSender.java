@@ -94,6 +94,32 @@ public class DefaultTelegramSender implements TelegramSender {
     }
 
     /**
+     * Envoie un message MarkdownV2 déjà préparé par l'appelant, sans échappement.
+     */
+    @Override
+    public void sendFormattedMessage(Long chatId, String markdownV2Text) {
+        sendFormattedMessageAndGetReference(chatId, markdownV2Text);
+    }
+
+    /**
+     * Envoie un message MarkdownV2 déjà préparé par l'appelant, sans échappement,
+     * et retourne sa référence.
+     */
+    @Override
+    public TelegramMessageReference sendFormattedMessageAndGetReference(Long chatId, String markdownV2Text) {
+        return sendText(chatId, markdownV2Text, "MarkdownV2", null);
+    }
+
+    /**
+     * Édite le texte MarkdownV2 déjà préparé par l'appelant, sans échappement,
+     * d'un message existant.
+     */
+    @Override
+    public TelegramMessageReference editFormattedMessage(Long chatId, Integer messageId, String markdownV2Text) {
+        return editText(chatId, messageId, markdownV2Text, "MarkdownV2", null);
+    }
+
+    /**
      * Envoie une vue Telegram.
      */
     @Override
