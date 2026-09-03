@@ -1,6 +1,9 @@
 package fr.ses10doigts.telegrambots.service.sender;
 
+import fr.ses10doigts.telegrambots.model.TelegramForumAccessCheck;
+import fr.ses10doigts.telegrambots.model.TelegramForumTopic;
 import fr.ses10doigts.telegrambots.model.TelegramMessageReference;
+import fr.ses10doigts.telegrambots.model.TelegramTopicIconColor;
 import fr.ses10doigts.telegrambots.model.TelegramTypingAction;
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +31,14 @@ public class SimpleTelegramSender {
 
     public TelegramMessageReference sendMessageAndGetReference(String botName, Long chatId, String text) {
         return resolveSender(botName).sendMessageAndGetReference(chatId, text);
+    }
+
+    public void sendMessage(String botName, Long chatId, Integer messageThreadId, String text) {
+        resolveSender(botName).sendMessage(chatId, messageThreadId, text);
+    }
+
+    public TelegramMessageReference sendMessageAndGetReference(String botName, Long chatId, Integer messageThreadId, String text) {
+        return resolveSender(botName).sendMessageAndGetReference(chatId, messageThreadId, text);
     }
 
     public void sendMarkdownMessage(String botName, Long chatId, String text) {
@@ -90,6 +101,14 @@ public class SimpleTelegramSender {
         return resolveSender(botName).sendViewAndGetReference(chatId, view);
     }
 
+    public void sendView(String botName, Long chatId, Integer messageThreadId, TelegramView view) {
+        resolveSender(botName).sendView(chatId, messageThreadId, view);
+    }
+
+    public TelegramMessageReference sendViewAndGetReference(String botName, Long chatId, Integer messageThreadId, TelegramView view) {
+        return resolveSender(botName).sendViewAndGetReference(chatId, messageThreadId, view);
+    }
+
     public TelegramMessageReference editMessage(String botName, Long chatId, Integer messageId, String text) {
         return resolveSender(botName).editMessage(chatId, messageId, text);
     }
@@ -114,11 +133,61 @@ public class SimpleTelegramSender {
         resolveSender(botName).sendChatAction(chatId, action);
     }
 
+    public void sendChatAction(String botName, Long chatId, Integer messageThreadId, TelegramTypingAction action) {
+        resolveSender(botName).sendChatAction(chatId, messageThreadId, action);
+    }
+
     public void sendTyping(String botName, Long chatId) {
         resolveSender(botName).sendTyping(chatId);
     }
 
+    public void sendTyping(String botName, Long chatId, Integer messageThreadId) {
+        resolveSender(botName).sendTyping(chatId, messageThreadId);
+    }
+
     public void answerCallbackQuery(String botName, String callbackQueryId) {
         resolveSender(botName).answerCallbackQuery(callbackQueryId);
+    }
+
+    public TelegramForumAccessCheck checkForumAccess(String botName, Long chatId) {
+        return resolveSender(botName).checkForumAccess(chatId);
+    }
+
+    public boolean canManageForumTopics(String botName, Long chatId) {
+        return resolveSender(botName).canManageForumTopics(chatId);
+    }
+
+    public TelegramForumTopic createForumTopic(String botName, Long chatId, String name) {
+        return resolveSender(botName).createForumTopic(chatId, name);
+    }
+
+    public TelegramForumTopic createForumTopic(
+            String botName,
+            Long chatId,
+            String name,
+            TelegramTopicIconColor iconColor,
+            String iconCustomEmojiId
+    ) {
+        return resolveSender(botName).createForumTopic(chatId, name, iconColor, iconCustomEmojiId);
+    }
+
+    public boolean editForumTopic(String botName, Long chatId, Integer messageThreadId, String name, String iconCustomEmojiId) {
+        return resolveSender(botName).editForumTopic(chatId, messageThreadId, name, iconCustomEmojiId);
+    }
+
+    public boolean closeForumTopic(String botName, Long chatId, Integer messageThreadId) {
+        return resolveSender(botName).closeForumTopic(chatId, messageThreadId);
+    }
+
+    public boolean reopenForumTopic(String botName, Long chatId, Integer messageThreadId) {
+        return resolveSender(botName).reopenForumTopic(chatId, messageThreadId);
+    }
+
+    public boolean deleteForumTopic(String botName, Long chatId, Integer messageThreadId) {
+        return resolveSender(botName).deleteForumTopic(chatId, messageThreadId);
+    }
+
+    public boolean unpinAllForumTopicMessages(String botName, Long chatId, Integer messageThreadId) {
+        return resolveSender(botName).unpinAllForumTopicMessages(chatId, messageThreadId);
     }
 }

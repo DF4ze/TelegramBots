@@ -11,7 +11,7 @@
 
     <groupId>fr.ses10doigts</groupId>
     <artifactId>telegram-bots-mvc</artifactId>
-    <version>1.7.0</version>
+    <version>1.9.1</version>
     <name>TelegramBots</name>
     <description>TelegramBots</description>
 

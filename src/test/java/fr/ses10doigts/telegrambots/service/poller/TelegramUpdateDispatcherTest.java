@@ -5,6 +5,7 @@ import fr.ses10doigts.telegrambots.model.TelegramHandlerMethod;
 import fr.ses10doigts.telegrambots.model.TelegramUpdateContext;
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramBotContext;
+import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramThreadContext;
 import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistry;
 import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistry;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSender;
@@ -29,6 +30,7 @@ class TelegramUpdateDispatcherTest {
     private TelegramHandlerRegistry registry;
     private TelegramSender sender;
     private CurrentTelegramBotContext currentBotContext;
+    private CurrentTelegramThreadContext currentThreadContext;
     private TelegramBotRegistry telegramBotRegistry;
     private TelegramUpdateDispatcher dispatcher;
 
@@ -37,9 +39,10 @@ class TelegramUpdateDispatcherTest {
         registry = mock(TelegramHandlerRegistry.class);
         sender = mock(TelegramSender.class);
         currentBotContext = new CurrentTelegramBotContext();
+        currentThreadContext = new CurrentTelegramThreadContext();
         telegramBotRegistry = mock(TelegramBotRegistry.class);
 
-        dispatcher = new TelegramUpdateDispatcher(registry, sender, currentBotContext, telegramBotRegistry);
+        dispatcher = new TelegramUpdateDispatcher(registry, sender, currentBotContext, currentThreadContext, telegramBotRegistry);
     }
 
     @Test
@@ -59,7 +62,7 @@ class TelegramUpdateDispatcherTest {
         dispatcher.dispatch(update);
 
         verify(registry).findCommandHandler("bot-1", "/start");
-        verify(sender).sendMessage(100L, "started");
+        verify(sender).sendMessage(100L, null, "started");
         assertThat(controller.lastContext).isNotNull();
         assertThat(controller.lastContext.getCommand()).isEqualTo("/start");
         assertThat(controller.invocationCount).isEqualTo(1);
@@ -82,7 +85,7 @@ class TelegramUpdateDispatcherTest {
         dispatcher.dispatch(update);
 
         verify(registry).findChatHandlers("bot-1");
-        verify(sender).sendMessage(100L, "chat-ok");
+        verify(sender).sendMessage(100L, null, "chat-ok");
         assertThat(controller.invocationCount).isEqualTo(1);
     }
 
@@ -103,7 +106,7 @@ class TelegramUpdateDispatcherTest {
 
         verify(sender).answerCallbackQuery("cb-1");
         verify(registry).findCallbackHandler("bot-1", "confirm");
-        verify(sender).sendMessage(100L, "callback-ok");
+        verify(sender).sendMessage(100L, null, "callback-ok");
         assertThat(controller.invocationCount).isEqualTo(1);
         assertThat(controller.lastContext.getMessageId()).isEqualTo(777);
     }

@@ -18,6 +18,19 @@ public class TelegramUpdateContext {
     private Message message;
     private Integer messageId;
 
+    /**
+     * Identifiant du sujet (topic) de forum dans lequel le message a été reçu, ou
+     * {@code null} si le message ne provient pas d'un sujet nommé (chat classique,
+     * ou sujet "Général" d'un forum).
+     */
+    private Integer messageThreadId;
+
+    /**
+     * {@code true} si le message provient réellement d'un sujet nommé d'un forum
+     * (équivalent à {@code messageThreadId != null}).
+     */
+    private boolean topicMessage;
+
     private Long chatId;
     private Long userId;
 
@@ -37,6 +50,8 @@ public class TelegramUpdateContext {
 
         Message message = null;
         Integer messageId = null;
+        Integer messageThreadId = null;
+        boolean topicMessage = false;
         Long chatId = null;
         Long userId = null;
         String text = null;
@@ -88,6 +103,11 @@ public class TelegramUpdateContext {
             return null;
         }
 
+        if (message != null && message.isTopicMessage()) {
+            topicMessage = true;
+            messageThreadId = message.getMessageThreadId();
+        }
+
         if (text != null && !text.isBlank()) {
             ParsedCommand parsed = ParsedCommand.parse(text);
             command = parsed.getCommand();
@@ -100,6 +120,8 @@ public class TelegramUpdateContext {
                 update,
                 message,
                 messageId,
+                messageThreadId,
+                topicMessage,
                 chatId,
                 userId,
                 text,

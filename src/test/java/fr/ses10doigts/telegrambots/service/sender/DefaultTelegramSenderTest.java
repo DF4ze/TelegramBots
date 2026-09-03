@@ -70,6 +70,26 @@ class DefaultTelegramSenderTest {
     }
 
     @Test
+    void shouldSendFormattedMessageInAGivenForumThreadWhenMessageThreadIdIsProvided() throws Exception {
+        // Regression : sendFormattedMessage(chatId, messageThreadId, text) ignorait
+        // jusqu'ici le messageThreadId (toujours envoye hors sujet, sur "General"),
+        // contrairement a sendMessage/sendView/sendChatAction qui le supportaient deja -
+        // voir ContextAwareTelegramSender pour le mecanisme de resolution ThreadLocal
+        // que ce defaut cassait silencieusement pour tout appelant se reposant sur
+        // sendFormattedMessage/AndGetReference depuis un Thread de forum.
+        Message telegramMessage = mock(Message.class);
+        when(telegramMessage.getChatId()).thenReturn(100L);
+        when(telegramMessage.getMessageId()).thenReturn(55);
+        ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
+        when(client.execute(captor.capture())).thenReturn(telegramMessage);
+
+        sender.sendFormattedMessageAndGetReference(100L, 42, "*deja formate*");
+
+        assertThat(captor.getValue().getMessageThreadId()).isEqualTo(42);
+        assertThat(captor.getValue().getParseMode()).isEqualTo("MarkdownV2");
+    }
+
+    @Test
     void shouldEditFormattedMessageWithoutEscapingAndWithMarkdownV2ParseMode() throws Exception {
         ArgumentCaptor<EditMessageText> captor = ArgumentCaptor.forClass(EditMessageText.class);
         when(client.execute(captor.capture())).thenReturn(Boolean.TRUE);
@@ -131,6 +151,28 @@ class DefaultTelegramSenderTest {
         sender.sendTyping(100L);
 
         verify(client, times(2)).execute(any(SendChatAction.class));
+    }
+
+    @Test
+    void shouldSendTypingActionInAGivenForumThreadWhenMessageThreadIdIsProvided() throws Exception {
+        when(client.execute(any(SendChatAction.class))).thenReturn(Boolean.TRUE);
+        ArgumentCaptor<SendChatAction> captor = ArgumentCaptor.forClass(SendChatAction.class);
+
+        sender.sendTyping(100L, 42);
+
+        verify(client).execute(captor.capture());
+        assertThat(captor.getValue().getMessageThreadId()).isEqualTo(42);
+    }
+
+    @Test
+    void shouldNotSetMessageThreadIdOnTypingActionWhenNull() throws Exception {
+        when(client.execute(any(SendChatAction.class))).thenReturn(Boolean.TRUE);
+        ArgumentCaptor<SendChatAction> captor = ArgumentCaptor.forClass(SendChatAction.class);
+
+        sender.sendTyping(100L, null);
+
+        verify(client).execute(captor.capture());
+        assertThat(captor.getValue().getMessageThreadId()).isNull();
     }
 
     @Test

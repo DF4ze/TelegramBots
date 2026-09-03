@@ -3,6 +3,7 @@ package fr.ses10doigts.telegrambots.configuration;
 
 import fr.ses10doigts.telegrambots.controller.TelegramBuiltinController;
 import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramBotContext;
+import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramThreadContext;
 import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistrationManager;
 import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistry;
 import fr.ses10doigts.telegrambots.service.bot.TelegramStartupValidator;
@@ -40,6 +41,12 @@ public class TelegramAutoConfiguration {
     //@ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
     public CurrentTelegramBotContext currentTelegramBotContext() {
         return new CurrentTelegramBotContext();
+    }
+
+    @Bean
+    //@ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
+    public CurrentTelegramThreadContext currentTelegramThreadContext() {
+        return new CurrentTelegramThreadContext();
     }
 
     @Bean
@@ -91,9 +98,10 @@ public class TelegramAutoConfiguration {
     @ConditionalOnProperty(prefix = "telegram", name = "enabled", havingValue = "true")
     public TelegramSender telegramSender(
             TelegramSenderRegistry telegramSenderRegistry,
-            CurrentTelegramBotContext currentTelegramBotContext
+            CurrentTelegramBotContext currentTelegramBotContext,
+            CurrentTelegramThreadContext currentTelegramThreadContext
     ) {
-        return new ContextAwareTelegramSender(telegramSenderRegistry, currentTelegramBotContext);
+        return new ContextAwareTelegramSender(telegramSenderRegistry, currentTelegramBotContext, currentTelegramThreadContext);
     }
 
     /**
@@ -125,9 +133,10 @@ public class TelegramAutoConfiguration {
             TelegramHandlerRegistry registry,
             TelegramSender telegramSender,
             CurrentTelegramBotContext currentTelegramBotContext,
+            CurrentTelegramThreadContext currentTelegramThreadContext,
             TelegramBotRegistry telegramBotRegistry
     ) {
-        return new TelegramUpdateDispatcher(registry, telegramSender, currentTelegramBotContext, telegramBotRegistry);
+        return new TelegramUpdateDispatcher(registry, telegramSender, currentTelegramBotContext, currentTelegramThreadContext, telegramBotRegistry);
     }
 
     @Bean

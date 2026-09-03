@@ -5,6 +5,7 @@ import fr.ses10doigts.telegrambots.model.TelegramHandlerMethod;
 import fr.ses10doigts.telegrambots.model.TelegramUpdateContext;
 import fr.ses10doigts.telegrambots.model.TelegramView;
 import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramBotContext;
+import fr.ses10doigts.telegrambots.service.bot.CurrentTelegramThreadContext;
 import fr.ses10doigts.telegrambots.service.bot.TelegramBotRegistry;
 import fr.ses10doigts.telegrambots.service.poller.handler.TelegramHandlerRegistry;
 import fr.ses10doigts.telegrambots.service.sender.TelegramSender;
@@ -22,6 +23,7 @@ public class TelegramUpdateDispatcher {
     private final TelegramHandlerRegistry registry;
     private final TelegramSender sender;
     private final CurrentTelegramBotContext currentBotContext;
+    private final CurrentTelegramThreadContext currentThreadContext;
     private final TelegramBotRegistry telegramBotRegistry;
 
     public void dispatch(Update update) {
@@ -40,21 +42,27 @@ public class TelegramUpdateDispatcher {
             return;
         }
 
-        if (isNotAllowed(context.getUserId())) {
-            handleUnauthorized(context);
-            return;
-        }
+        try {
+            currentThreadContext.setCurrentMessageThreadId(context.getMessageThreadId());
 
-        if (context.getCommand() != null) {
-            TelegramHandlerMethod handler = registry.findCommandHandler(botId, context.getCommand());
-            if (handler != null) {
-                invoke(handler, context);
+            if (isNotAllowed(context.getUserId())) {
+                handleUnauthorized(context);
                 return;
             }
-        }
 
-        for (TelegramHandlerMethod handler : registry.findChatHandlers(botId)) {
-            invoke(handler, context);
+            if (context.getCommand() != null) {
+                TelegramHandlerMethod handler = registry.findCommandHandler(botId, context.getCommand());
+                if (handler != null) {
+                    invoke(handler, context);
+                    return;
+                }
+            }
+
+            for (TelegramHandlerMethod handler : registry.findChatHandlers(botId)) {
+                invoke(handler, context);
+            }
+        } finally {
+            currentThreadContext.clear();
         }
     }
 
@@ -73,22 +81,28 @@ public class TelegramUpdateDispatcher {
             return;
         }
 
-        if (isNotAllowed(context.getUserId())) {
-            handleUnauthorized(context);
-            return;
-        }
+        try {
+            currentThreadContext.setCurrentMessageThreadId(context.getMessageThreadId());
 
-        TelegramHandlerMethod handler = registry.findCallbackHandler(botId, context.getCallbackData());
-        if (handler == null) {
-            log.warn(
-                    "No Telegram callback handler found for bot={} data={}",
-                    botId,
-                    context.getCallbackData()
-            );
-            return;
-        }
+            if (isNotAllowed(context.getUserId())) {
+                handleUnauthorized(context);
+                return;
+            }
 
-        invoke(handler, context);
+            TelegramHandlerMethod handler = registry.findCallbackHandler(botId, context.getCallbackData());
+            if (handler == null) {
+                log.warn(
+                        "No Telegram callback handler found for bot={} data={}",
+                        botId,
+                        context.getCallbackData()
+                );
+                return;
+            }
+
+            invoke(handler, context);
+        } finally {
+            currentThreadContext.clear();
+        }
     }
 
     private boolean isNotAllowed(Long userId) {
@@ -124,9 +138,9 @@ public class TelegramUpdateDispatcher {
                 case null -> {
                 }
                 case String response when !response.isBlank() ->
-                        sender.sendMessage(context.getChatId(), response);
+                        sender.sendMessage(context.getChatId(), context.getMessageThreadId(), response);
                 case TelegramView view ->
-                        sender.sendView(context.getChatId(), view);
+                        sender.sendView(context.getChatId(), context.getMessageThreadId(), view);
                 default ->
                         throw new IllegalStateException(
                                 "Unsupported Telegram handler return type: " + result.getClass()

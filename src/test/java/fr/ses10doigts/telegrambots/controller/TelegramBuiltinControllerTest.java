@@ -57,6 +57,8 @@ class TelegramBuiltinControllerTest {
                 null,
                 null,
                 null,
+                false,
+                null,
                 null,
                 null,
                 null,

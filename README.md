@@ -23,6 +23,7 @@ L’objectif : rendre le développement de bots Telegram clair, structuré et ra
 - [Gestion des callback queries](#gestion-des-callback-queries)
 - [Vues Telegram et boutons inline](#vues-telegram-et-boutons-inline)
 - [API d'envoi](#api-denvoi)
+- [Sujets de forum (topics)](#sujets-de-forum-topics)
 - [Enregistrement automatique des commandes](#enregistrement-automatique-des-commandes)
 - [Architecture interne](#architecture-interne)
 - [Règles de validation au démarrage](#règles-de-validation-au-démarrage)
@@ -61,6 +62,7 @@ L'objectif est de permettre d'écrire des bots Telegram en Java avec une approch
 - Édition de messages texte et de vues inline.
 - **Découpage automatique** des messages texte dépassant la limite Telegram (4096 caractères) en plusieurs messages.
 - Suppression de messages par `messageId`.
+- Gestion des **sujets (topics)** d'un forum Telegram : création, édition, fermeture/réouverture, suppression, envoi ciblé dans un sujet.
 - Actions de présence Telegram (`typing`, etc.).
 - **Auto-registration** des commandes via l'API Telegram.
 - Configuration du **menu button** Telegram pour afficher les commandes.
@@ -301,6 +303,8 @@ Le module construit un `TelegramUpdateContext` à partir de l'`Update` Telegram.
 - `botId`
 - `update`
 - `message`
+- `messageThreadId` — identifiant du sujet (topic) de forum d'origine, ou `null` hors sujet nommé (voir [Sujets de forum (topics)](#sujets-de-forum-topics))
+- `topicMessage` — `true` si le message provient réellement d'un sujet nommé
 - `chatId`
 - `userId`
 - `text`
@@ -620,6 +624,83 @@ TelegramMessageReference reference = TelegramMessageReference.builder()
 ```
 
 Elle sert à conserver les identifiants nécessaires pour rééditer ou supprimer un message plus tard.
+
+## Sujets de forum (topics)
+
+Un groupe Telegram peut activer les **"Sujets"** (forum topics) : des sous-conversations
+nommées à l'intérieur d'un même supergroupe. Le module permet de les gérer via
+`TelegramSender` (et son équivalent multi-bot `SimpleTelegramSender`).
+
+### Pré-requis côté Telegram
+
+- Le groupe doit déjà avoir l'option **"Sujets"** activée dans ses paramètres — c'est
+  une bascule faite manuellement par un administrateur humain, **aucune méthode de
+  l'API Bot Telegram ne permet de l'activer depuis un bot**.
+- Le bot doit être administrateur du groupe avec le droit **"Gérer les sujets"**
+  (`can_manage_topics`) pour créer/éditer/fermer/rouvrir un sujet, et en plus le droit
+  **"Supprimer les messages"** (`can_delete_messages`) pour en supprimer un.
+- Telegram n'expose **aucun champ de description** pour un sujet : seuls un titre
+  (1 à 128 caractères) et une icône (couleur unie et/ou emoji personnalisé) existent.
+- La **couleur** de l'icône ne peut être choisie qu'à la création (`createForumTopic`) ;
+  elle n'est plus modifiable ensuite (seuls le titre et l'emoji le sont, via
+  `editForumTopic`).
+- L'API Bot Telegram **ne permet pas de lister** les sujets existants d'un groupe : si
+  vous devez les retrouver plus tard, conservez vous-même les `messageThreadId` reçus
+  à la création.
+
+### Vérifier les droits avant d'agir
+
+```java
+TelegramForumAccessCheck access = telegramSender.checkForumAccess(chatId);
+
+if (!access.canManageForumTopics()) {
+    // groupe sans sujets activés, ou droit "Gérer les sujets" manquant
+}
+```
+
+### Créer, éditer, fermer, supprimer un sujet
+
+```java
+TelegramForumTopic topic = telegramSender.createForumTopic(
+        chatId,
+        "Support",
+        TelegramTopicIconColor.BLUE,
+        null // ou un icon_custom_emoji_id
+);
+
+telegramSender.editForumTopic(chatId, topic.getMessageThreadId(), "Support VIP", null);
+telegramSender.closeForumTopic(chatId, topic.getMessageThreadId());
+telegramSender.reopenForumTopic(chatId, topic.getMessageThreadId());
+telegramSender.deleteForumTopic(chatId, topic.getMessageThreadId()); // irréversible
+```
+
+Contrairement au reste de `TelegramSender` (qui journalise et renvoie silencieusement
+`null`/`false` en cas d'erreur), ces méthodes lèvent une `TelegramForumException`
+explicite — avec une `TelegramForumErrorReason` (`NOT_A_FORUM`, `MISSING_RIGHTS`,
+`TOPIC_NOT_FOUND`, `API_ERROR`) déduite au mieux de la réponse Telegram.
+
+### Répondre dans le sujet courant
+
+Un handler qui reçoit une commande depuis un sujet répond automatiquement dans ce
+même sujet, sans rien changer à son code :
+
+```java
+@Command("/status")
+public String status(TelegramUpdateContext ctx) {
+    return "OK"; // répond dans le sujet d'où vient la commande, s'il y en a un
+}
+```
+
+`TelegramUpdateContext` expose aussi `getMessageThreadId()` et `isTopicMessage()` pour
+inspecter explicitement le sujet d'origine.
+
+Pour envoyer un message dans un sujet précis en dehors de tout contexte de requête
+(job planifié, notification proactive), utilisez les surcharges dédiées :
+
+```java
+telegramSender.sendMessage(chatId, topic.getMessageThreadId(), "Nouveau ticket ouvert");
+telegramSender.sendView(chatId, topic.getMessageThreadId(), view);
+```
 
 ## Enregistrement automatique des commandes
 

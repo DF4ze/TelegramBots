@@ -35,6 +35,30 @@ class TelegramUpdateContextTest {
         assertEquals(List.of(), context.getArgs());
         assertFalse(context.isCallbackQuery());
         assertNull(context.getCallbackData());
+        assertNull(context.getMessageThreadId());
+        assertFalse(context.isTopicMessage());
+    }
+
+    @Test
+    void shouldCaptureMessageThreadIdForTopicMessage() {
+        Update update = messageUpdateInTopic(100L, 200L, "hello from a topic", 42);
+
+        TelegramUpdateContext context = TelegramUpdateContext.from(update, BOT_ID);
+
+        assertNotNull(context);
+        assertTrue(context.isTopicMessage());
+        assertEquals(42, context.getMessageThreadId());
+    }
+
+    @Test
+    void shouldNotExposeMessageThreadIdWhenMessageIsNotATopicMessage() {
+        Update update = messageUpdate(100L, 200L, "hello world");
+
+        TelegramUpdateContext context = TelegramUpdateContext.from(update, BOT_ID);
+
+        assertNotNull(context);
+        assertFalse(context.isTopicMessage());
+        assertNull(context.getMessageThreadId());
     }
 
     @Test
@@ -166,6 +190,28 @@ class TelegramUpdateContextTest {
         when(message.getFrom()).thenReturn(user);
         when(message.hasText()).thenReturn(true);
         when(message.getText()).thenReturn(text);
+
+        update.setMessage(message);
+        return update;
+    }
+
+    private Update messageUpdateInTopic(Long chatId, Long userId, String text, Integer messageThreadId) {
+        Update update = new Update();
+
+        Message message = Mockito.mock(Message.class);
+        Chat chat = Mockito.mock(Chat.class);
+        User user = Mockito.mock(User.class);
+
+        when(chat.getId()).thenReturn(chatId);
+        when(user.getId()).thenReturn(userId);
+        when(message.getChat()).thenReturn(chat);
+        when(message.getChatId()).thenReturn(chatId);
+        when(message.getMessageId()).thenReturn(321);
+        when(message.getFrom()).thenReturn(user);
+        when(message.hasText()).thenReturn(true);
+        when(message.getText()).thenReturn(text);
+        when(message.isTopicMessage()).thenReturn(true);
+        when(message.getMessageThreadId()).thenReturn(messageThreadId);
 
         update.setMessage(message);
         return update;
